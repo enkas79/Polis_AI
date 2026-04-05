@@ -36,7 +36,7 @@ Quando proverai a installarlo, Windows mostrerà una schermata blu con scritto *
 ---
 
 ## 📥 Come Installare
-1. Vai nella sezione **[Releases](https://github.com/enkas79/Polis_AI/releases/)** qui su GitHub (colonna di destra).
+1. Vai nella sezione **[Releases](https://github.com/enkas79/Polis_AI/releases/)** qui su GitHub.
 2. Scarica l'ultimo file **`Polis_AI_Installer.zip`** o **`Polis_AI_Setup.exe`**.
 3. Avvia il Setup (ricordati l'avviso di Windows spiegato sopra).
 4. Avvia il gioco dal collegamento sul Desktop e inserisci la tua API Key!
