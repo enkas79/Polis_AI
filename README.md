@@ -1,5 +1,11 @@
 # 🌍 Polis_AI - Simulatore Geopolitico Asimmetrico
 
+Benvenuto in **Polis_AI**, un simulatore geopolitico "Data-Driven" nato dalla forte ispirazione per titoli testuali come **Pax Historia**, le tue scelte non si basano su regole fisse o script pre-calcolati, ma vengono elaborate in tempo reale dall'Intelligenza Artificiale Generativa (Google Gemini). 
+
+Diventa il Capo di Stato di una nazione, gestisci l'economia, il debito pubblico, l'ordine interno e le relazioni diplomatiche in un mondo vivo e reattivo.
+
+*(Inserisci qui uno screenshot del gioco trascinando l'immagine nell'editor di GitHub)*
+
 Benvenuto in **Polis_AI**, un simulatore geopolitico "Data-Driven" in cui le tue scelte non si basano su regole fisse, ma vengono elaborate in tempo reale dall'Intelligenza Artificiale Generativa (Google Gemini 2.5). 
 
 Diventa il Capo di Stato di una nazione, gestisci l'economia, il debito pubblico, l'ordine interno e le relazioni diplomatiche in un mondo vivo e reattivo.
