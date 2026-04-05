@@ -20,7 +20,7 @@ class GameEngine:
         self.game_state: Dict[str, Any] = {}
         self.scenario_context: str = ""
         self.preloaded_nations: Dict[str, Any] = {}
-        self.current_scenario_filename: Optional[str] = None  # TRACCIA IL FILE APERTO
+        self.current_scenario_filename: Optional[str] = None
 
         if not os.path.exists("scenarios"):
             os.makedirs("scenarios")
@@ -64,7 +64,7 @@ class GameEngine:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            self.current_scenario_filename = filename  # Salva il nome del file
+            self.current_scenario_filename = filename
             self.game_state["current_date"] = datetime.date(data.get("start_year", 2024), 1, 1)
             self.scenario_context = data.get("global_context", "")
 
@@ -83,7 +83,9 @@ class GameEngine:
             "stats": {
                 "stability": 60, "economy": 60, "reputation": 50,
                 "treasury_billions": 0, "public_debt_billions": 0, "population_millions": 0.0
-            }
+            },
+            "game_over": False,
+            "game_over_reason": ""
         }
         self.scenario_context = ""
         self.preloaded_nations = {}
@@ -152,8 +154,10 @@ class GameEngine:
     def get_relations(self) -> Dict[str, int]:
         return self.game_state.get("relations", {})
 
+    def is_game_over(self) -> bool:
+        return self.game_state.get("game_over", False)
+
     def get_country_intel(self, target_country: str) -> Dict[str, Any]:
-        """Restituisce intelligence. Aggiunto il flag 'is_preloaded'."""
         target_upper = target_country.upper()
         relation = self.game_state.get("relations", {}).get(target_upper, 0)
         is_preloaded = target_upper in self.preloaded_nations
@@ -166,22 +170,19 @@ class GameEngine:
             "relation": relation,
             "resources": resources,
             "factions": factions,
-            "is_preloaded": is_preloaded,  # Passato alla UI
+            "is_preloaded": is_preloaded,
             "is_player": target_country == self.game_state.get("selected_country")
         }
 
     def expand_scenario_with_ai(self, country_name: str) -> Dict[str, Any]:
-        """SCENARIO BUILDER: Chiede i dati a Gemini e li salva nel JSON!"""
-        if not self.current_scenario_filename:
-            return {"status": "error", "message": "Nessuno scenario caricato in cui salvare i dati."}
-        if not self.gemini_client:
-            return {"status": "error", "message": "API Gemini non configurata."}
+        if not self.current_scenario_filename: return {"status": "error", "message": "Nessuno scenario caricato."}
+        if not self.gemini_client: return {"status": "error", "message": "API Gemini non configurata."}
 
         year = self.game_state["current_date"].year
         prompt = (
             f"Agisci come database geopolitico. Censisci '{country_name}' nell'anno {year}.\n"
-            f"Rispondi ESATTAMENTE con questo formato JSON, senza nessun altro testo o markdown:\n"
-            f'{{"treasury_billions": 100, "public_debt_billions": 50, "population_millions": 10.5, "stability": 60, "economy": 60, "reputation": 50, "resources": "Scrivi qui 3 risorse con percentuali", "factions": ["Alleanza1", "Alleanza2"]}}'
+            f"Rispondi ESATTAMENTE con questo formato JSON:\n"
+            f'{{"treasury_billions": 100, "public_debt_billions": 50, "population_millions": 10.5, "stability": 60, "economy": 60, "reputation": 50, "resources": "3 risorse con %", "factions": ["Alleanza1", "Alleanza2"]}}'
         )
 
         try:
@@ -189,32 +190,17 @@ class GameEngine:
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
-            # Legge il file corrente
             filepath = os.path.join("scenarios", self.current_scenario_filename)
             with open(filepath, "r", encoding="utf-8") as f:
                 scenario_data = json.load(f)
-
-            # Inserisce la nazione
-            if "nations_data" not in scenario_data:
-                scenario_data["nations_data"] = {}
-
-            # Formatta il nome capitalizzato come gli altri
+            if "nations_data" not in scenario_data: scenario_data["nations_data"] = {}
             scenario_data["nations_data"][country_name.title()] = new_data
-
-            # Salva su disco
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(scenario_data, f, indent=4)
-
-            # Aggiorna la memoria RAM del motore
             self.preloaded_nations[country_name.upper()] = new_data
-
-            return {"status": "success",
-                    "message": f"{country_name} è stato censito e salvato nello scenario per sempre!"}
+            return {"status": "success", "message": f"{country_name} è stato censito!"}
         except Exception as e:
-            return {"status": "error", "message": f"Errore nell'auto-apprendimento: {str(e)}"}
-
-    # ... I restanti metodi save_game, load_game, process_action, ecc. rimangono invariati rispetto a prima.
-    # (Per brevità li ometto dalla spiegazione, ma assicurati che siano presenti come nel codice precedente)
+            return {"status": "error", "message": f"Errore: {str(e)}"}
 
     def save_game(self, filepath: str) -> None:
         try:
@@ -242,6 +228,7 @@ class GameEngine:
             if "public_debt_billions" not in loaded_state["stats"]: loaded_state["stats"]["public_debt_billions"] = 50
             if "history_log" not in loaded_state: loaded_state["history_log"] = loaded_state.get("history", [])
             if "relations" not in loaded_state: loaded_state["relations"] = {}
+            if "game_over" not in loaded_state: loaded_state["game_over"] = False
 
             self.scenario_context = loaded_state.get("scenario_context", "")
             self.preloaded_nations = loaded_state.get("preloaded_nations", {})
@@ -289,8 +276,49 @@ class GameEngine:
 
         return ai_response.strip()
 
+    def _check_game_over_conditions(self) -> Optional[str]:
+        """Controlla se il giocatore ha perso. Ritorna il motivo o None."""
+        stats = self.game_state["stats"]
+
+        if stats["stability"] <= 0:
+            return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
+
+        tesoro = stats["treasury_billions"]
+        debito = stats["public_debt_billions"]
+
+        # Sconfitta per Debito: Se il debito è troppo alto (x20) rispetto alle riserve positive (evitiamo calcoli su tesoro negativo)
+        # e c'è un debito minimo di 1000 Mld.
+        safe_tesoro = max(1, tesoro)
+        if debito > 1000 and debito > (safe_tesoro * 20):
+            return "DEFAULT SOVRANO: Il debito pubblico è fuori controllo. I mercati internazionali si rifiutano di acquistare i tuoi titoli. Lo stato è in bancarotta."
+
+        return None
+
+    def trigger_game_over(self, reason: str) -> Dict[str, Any]:
+        """Forza l'AI a generare un report epico di Game Over."""
+        self.game_state["game_over"] = True
+        self.game_state["game_over_reason"] = reason
+        country = self.game_state["selected_country"]
+
+        prompt = (
+            f"Agisci come uno storico contemporaneo.\n"
+            f"Il governo di '{country}' è appena caduto per questo motivo: '{reason}'.\n"
+            f"Scrivi un drammatico e solenne resoconto finale che descrive la caduta del leader (il giocatore) e le conseguenze immediate sul paese e sul mondo.\n"
+            f"Formattazione: Usa titoli drammatici e grassetti. Sii spietato ma epico."
+        )
+        try:
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
+        except Exception as e:
+            return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n(Errore generazione AI: {e})",
+                    "new_date": self.get_current_date_str()}
+
     def process_action(self, action_internal: str, action_economy: str, action_diplomacy: str, time_jump_text: str) -> \
     Dict[str, Any]:
+        if self.game_state.get("game_over"):
+            return {"status": "error",
+                    "message": "GAME OVER. Il tuo governo è caduto. Inizia una nuova partita dal menu."}
+
         if not GEMINI_AVAILABLE: return {"status": "error", "message": "google-genai non installato."}
         if not self.gemini_client: return {"status": "error", "message": "Nessuna API Key configurata."}
 
@@ -351,7 +379,7 @@ class GameEngine:
             f"REGOLE TASSATIVE PER LA RISPOSTA:\n"
             f"1. BREVITÀ E FORMATTAZIONE: Sii conciso. Usa paragrafi brevi e grassetti.\n"
             f"2. CONSEGUENZE GEOPOLITICHE: Reagisci alle azioni e usa le alleanze di appartenenza per calcolare le ripercussioni.\n"
-            f"3. MONDO VIVO (Globale): Descrivi cosa è successo nel resto del mondo in questo lasso di tempo, Rispettando il CONTESTO GLOBALE.\n\n"
+            f"3. MONDO VIVO (Globale): Descrivi cosa è successo nel resto del mondo.\n\n"
             f"REGOLE PER CALCOLO DATI E DIPLOMAZIA (FONDAMENTALE):\n"
             f"Alla fine esatta della tua risposta, aggiungi QUESTE DUE RIGHE esatte:\n"
             f"[DATI] STAB:X | ECO:Y | REP:Z | TESORO:W | DEBITO:D | POP:V\n"
@@ -364,6 +392,12 @@ class GameEngine:
             clean_text = self._parse_and_update_engine_data(response.text)
             self.game_state["history_log"].insert(0, log_entry)
             if len(self.game_state["history_log"]) > 15: self.game_state["history_log"].pop()
+
+            # -- CONTROLLO DEL GAME OVER DOPO IL TURNO --
+            game_over_reason = self._check_game_over_conditions()
+            if game_over_reason:
+                return self.trigger_game_over(game_over_reason)
+
             return {"status": "success", "response": clean_text, "new_date": new_date_str}
         except Exception as e:
             self.game_state["current_date"] -= delta

@@ -1,6 +1,5 @@
 import sys
 import os
-from auto_updater import AutoUpdater
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QTextEdit, QLabel, QMessageBox, QFrame,
@@ -9,7 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer
 from PyQt6.QtGui import QColor
 
-# Previene lo schermo bianco/grigio in caso di conflitti su Linux
+# Previene lo schermo bianco su Linux
 os.environ["QTWEBENGINE_DISABLE_HARDWARE_ACCELERATION"] = "1"
 
 try:
@@ -27,7 +26,8 @@ except ImportError:
 from game_engine import GameEngine
 from map_manager import MapManager
 from ui_components import ReportDialog, ApiDialog, ScenarioSelectionDialog, CountryIntelDialog
-from ui_menu import setup_menu_bar  # Importa il nuovo menu separato!
+from ui_menu import setup_menu_bar
+from auto_updater import AutoUpdater  # L'Auto Updater di GitHub!
 
 if WEB_ENGINE_AVAILABLE:
     class MapWebPage(QWebEnginePage):
@@ -56,10 +56,9 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(500, self.show_startup_scenario_dialog)
 
     def init_ui(self) -> None:
-        self.setWindowTitle("Polis_AI - Geopolitical Simulator (v0.4.0)")
+        self.setWindowTitle("Polis_AI - Geopolitical Simulator (v0.4.3)")
         self.resize(1400, 900)
 
-        # Chiama la funzione per costruire il menu
         self.setup_menu()
 
         central_widget = QWidget()
@@ -104,6 +103,14 @@ class MainWindow(QMainWindow):
         status_layout.addWidget(self.lbl_active_country)
         status_layout.addWidget(self.lbl_date)
         side_panel.addWidget(status_frame)
+
+        # 🛑 GAME OVER BANNER (Nascosto di default)
+        self.lbl_game_over = QLabel("<b>IL TUO GOVERNO È CADUTO</b>")
+        self.lbl_game_over.setStyleSheet(
+            "background-color: #c0392b; color: white; padding: 10px; font-size: 16px; border-radius: 5px;")
+        self.lbl_game_over.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_game_over.setVisible(False)
+        side_panel.addWidget(self.lbl_game_over)
 
         # 2. Input Comandi a Ministeri
         side_panel.addSpacing(5)
@@ -240,7 +247,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def check_updates(self) -> None:
-        """Chiama il modulo AutoUpdater per verificare le versioni su GitHub."""
+        """Chiama il modulo AutoUpdater (GitHub)"""
         AutoUpdater.check_for_updates(self)
 
     def _check_api_on_startup(self) -> None:
@@ -275,6 +282,8 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
+            self.engine.reset_game()
+            self.update_ui_from_state()
             self.show_startup_scenario_dialog()
 
     def save_game_dialog(self) -> None:
@@ -303,6 +312,18 @@ class MainWindow(QMainWindow):
 
     def update_ui_from_state(self) -> None:
         country = self.engine.get_current_country()
+
+        # 🛑 GESTIONE UI GAME OVER 🛑
+        is_game_over = self.engine.is_game_over()
+        self.lbl_game_over.setVisible(is_game_over)
+        self.btn_send.setEnabled(not is_game_over)
+        self.input_internal.setEnabled(not is_game_over)
+        self.input_economy.setEnabled(not is_game_over)
+        self.input_diplomacy.setEnabled(not is_game_over)
+
+        if is_game_over:
+            self.lbl_active_country.setText(f"Nazione: <b>DEPOSTO</b>")
+            return
 
         if country:
             self.lbl_active_country.setText(f"Nazione: <b>{country.upper()}</b> 🔒")
@@ -442,6 +463,18 @@ class MainWindow(QMainWindow):
 
             report_dialog = ReportDialog(result['new_date'], result['response'], self)
             report_dialog.exec()
+
+        elif result.get("status") == "game_over":
+            self.update_ui_from_state()  # Aggiorna la UI per mostrare il banner rosso e bloccare i bottoni
+
+            # Mostra il report epico della sconfitta
+            report_dialog = ReportDialog(result['new_date'], result['response'], self)
+            report_dialog.setWindowTitle("REPORT FINALE - GOVERNO CADUTO")
+            report_dialog.exec()
+
+            QMessageBox.critical(self, "GAME OVER",
+                                 "Il tuo governo è caduto. Clicca su 'Nuova Partita' nel menu in alto per ricominciare.")
+
         else:
             QMessageBox.warning(self, "Errore Operativo", result.get("message", "Errore sconosciuto"))
 

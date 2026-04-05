@@ -1,6 +1,8 @@
 import urllib.request
 import os
+import time
 from PyQt6.QtWidgets import QMessageBox, QApplication
+from PyQt6.QtCore import Qt
 
 
 class AutoUpdater:
@@ -9,8 +11,8 @@ class AutoUpdater:
     # ⚠️ INSERISCI QUI IL TUO USERNAME DI GITHUB
     GITHUB_USERNAME = "enkas79"
 
-    # URL di base per scaricare i file grezzi (Raw) da GitHub
-    BASE_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/Polis_AI/main/"
+    # URL di base per scaricare i file grezzi (Raw) da GitHub (Ramo MASTER)
+    BASE_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/Polis_AI/master/"
 
     # Lista dei file fondamentali da aggiornare
     FILES_TO_UPDATE = [
@@ -39,8 +41,8 @@ class AutoUpdater:
         local_version = cls.get_local_version()
 
         try:
-            # 1. Controlla la versione online
-            version_url = cls.BASE_RAW_URL + "version.txt"
+            # 1. Controlla la versione online (con Cache-Buster!)
+            version_url = cls.BASE_RAW_URL + f"version.txt?t={time.time()}"
             req = urllib.request.Request(version_url, headers={'Cache-Control': 'no-cache'})
             with urllib.request.urlopen(req, timeout=5) as response:
                 online_version = response.read().decode('utf-8').strip()
@@ -72,7 +74,8 @@ class AutoUpdater:
 
         try:
             for filename in cls.FILES_TO_UPDATE:
-                file_url = cls.BASE_RAW_URL + filename
+                # Usa il Cache-Buster anche per scaricare i file nuovi!
+                file_url = cls.BASE_RAW_URL + f"{filename}?t={time.time()}"
                 req = urllib.request.Request(file_url, headers={'Cache-Control': 'no-cache'})
 
                 with urllib.request.urlopen(req, timeout=10) as response:
