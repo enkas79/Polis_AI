@@ -56,7 +56,8 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(500, self.show_startup_scenario_dialog)
 
     def init_ui(self) -> None:
-        self.setWindowTitle("Polis_AI - Geopolitical Simulator (v0.4.3)")
+        current_version = AutoUpdater.get_local_version()
+        self.setWindowTitle(f"Polis_AI - Geopolitical Simulator (v{current_version})")
         self.resize(1400, 900)
 
         self.setup_menu()

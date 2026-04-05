@@ -96,10 +96,20 @@ class ApiDialog(QDialog):
 class InfoDialog(QMessageBox):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+
+        # Legge la versione dinamicamente
+        versione = "Sconosciuta"
+        try:
+            with open("version.txt", "r", encoding="utf-8") as f:
+                versione = f.read().strip()
+        except FileNotFoundError:
+            pass
+
         self.setWindowTitle("Informazioni su Polis_AI")
         self.setText("<b>Polis_AI Simulator</b>")
         self.setInformativeText(
-            "Autore: Enrico Martini\nVersione: 0.4.0\n\nMotore AI: Gemini 2.5-Flash (Attivo)\nMappa: Leaflet.js con GeoJSON")
+            f"Autore: Enrico Martini\nVersione: {versione}\n\nMotore AI: Gemini (Attivo)\nMappa: Leaflet.js con GeoJSON"
+        )
         self.setIcon(QMessageBox.Icon.Information)
 
 
