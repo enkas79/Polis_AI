@@ -23,15 +23,17 @@ def setup_menu_bar(window):
     action_load.setShortcut("Ctrl+L")
     action_load.triggered.connect(window.load_game_dialog)
 
-    # --- MENU IMPOSTAZIONI ---
+    # --- MENU IMPOSTAZIONI E SISTEMA ---
     settings_menu = menubar.addMenu("Impostazioni")
     settings_menu.addAction("Configura API Key Gemini").triggered.connect(window.show_api_dialog)
+    settings_menu.addSeparator()
+    # Aggiungiamo il richiamo alla funzione del main per gli aggiornamenti
+    settings_menu.addAction("🔄 Cerca Aggiornamenti").triggered.connect(window.check_updates)
 
     # --- MENU SUPPORTO E AIUTO ---
     help_menu = menubar.addMenu("Aiuto & Supporto")
 
     action_support = help_menu.addAction("❤️ Supporta il Progetto & Guide")
-    # Colora il testo di rosso per farlo risaltare (supportato su molti stili OS)
     action_support.triggered.connect(lambda: SupportHubDialog(window).exec())
 
     help_menu.addSeparator()

@@ -1,5 +1,6 @@
 import sys
 import os
+from auto_updater import AutoUpdater
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QTextEdit, QLabel, QMessageBox, QFrame,
@@ -235,8 +236,12 @@ class MainWindow(QMainWindow):
         return bar
 
     def setup_menu(self) -> None:
-        # Questa singola riga delega la creazione del menu al nuovo file ui_menu.py
         setup_menu_bar(self)
+
+    @pyqtSlot()
+    def check_updates(self) -> None:
+        """Chiama il modulo AutoUpdater per verificare le versioni su GitHub."""
+        AutoUpdater.check_for_updates(self)
 
     def _check_api_on_startup(self) -> None:
         if not self.engine.api_key:
