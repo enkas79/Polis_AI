@@ -4,7 +4,8 @@ Benvenuto in **Polis_AI**, un simulatore geopolitico "Data-Driven" in cui le tue
 
 Diventa il Capo di Stato di una nazione, gestisci l'economia, il debito pubblico, l'ordine interno e le relazioni diplomatiche in un mondo vivo e reattivo.
 
-<img width="1920" height="1080" alt="Immagine 2026-04-05 204232" src="https://github.com/user-attachments/assets/728d2d58-dfbe-46ef-adc2-1cea7dcf0323" />
+<img width="1912" height="1016" alt="Immagine 2026-04-05 204232" src="https://github.com/user-attachments/assets/152c094f-8693-427f-a02b-10c5770cbcb9" />
+
 
 ---
 
