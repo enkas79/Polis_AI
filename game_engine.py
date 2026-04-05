@@ -129,7 +129,7 @@ class GameEngine:
             f"Rispondi SOLO con:\n[INIT] TESORO:<int> | DEBITO:<int> | POP:<decimale>"
         )
         try:
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite-lite', contents=prompt)
             match = re.search(r'\[INIT\]\s*TESORO:\s*(-?[\d\.,]+)\s*\|\s*DEBITO:\s*([\d\.,]+)\s*\|\s*POP:\s*([\d\.,]+)',
                               response.text, re.IGNORECASE)
             if match:
@@ -193,7 +193,7 @@ class GameEngine:
         )
 
         try:
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
@@ -308,7 +308,7 @@ class GameEngine:
             f"Formattazione: Usa titoli drammatici e grassetti. Sii spietato ma epico."
         )
         try:
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
         except Exception as e:
             # Usciamo con l'ammortizzatore se il game over sbatte sul limite 429
@@ -390,7 +390,7 @@ class GameEngine:
         )
 
         try:
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_text = self._parse_and_update_engine_data(response.text)
             self.game_state["history_log"].insert(0, log_entry)
             if len(self.game_state["history_log"]) > 15: self.game_state["history_log"].pop()
