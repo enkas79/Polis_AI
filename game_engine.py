@@ -41,6 +41,13 @@ class GameEngine:
         ConfigManager.save_api_key(api_key)
         self._init_gemini()
 
+    def _format_api_error(self, exception: Exception) -> str:
+        """Ammortizzatore Globale per gli errori di Gemini (incluso il 429)"""
+        error_msg = str(exception)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            return "⚠️ SERVER INTELLIGENCE SOVRACCARICHI ⚠️\nHai inviato troppe richieste in poco tempo al Comando Centrale di Google.\n\nPer favore, attendi circa 60 secondi prima di inviare un nuovo ordine o censire una nazione."
+        return f"Errore di comunicazione con il Comando Centrale:\n{error_msg}"
+
     def get_available_scenarios(self) -> List[Dict[str, str]]:
         scenarios = []
         if os.path.exists("scenarios"):
@@ -200,7 +207,8 @@ class GameEngine:
             self.preloaded_nations[country_name.upper()] = new_data
             return {"status": "success", "message": f"{country_name} è stato censito!"}
         except Exception as e:
-            return {"status": "error", "message": f"Errore: {str(e)}"}
+            # Usciamo con l'ammortizzatore se il censimento sbatte sul limite 429
+            return {"status": "error", "message": self._format_api_error(e)}
 
     def save_game(self, filepath: str) -> None:
         try:
@@ -277,25 +285,18 @@ class GameEngine:
         return ai_response.strip()
 
     def _check_game_over_conditions(self) -> Optional[str]:
-        """Controlla se il giocatore ha perso. Ritorna il motivo o None."""
         stats = self.game_state["stats"]
-
         if stats["stability"] <= 0:
             return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
 
         tesoro = stats["treasury_billions"]
         debito = stats["public_debt_billions"]
-
-        # Sconfitta per Debito: Se il debito è troppo alto (x20) rispetto alle riserve positive (evitiamo calcoli su tesoro negativo)
-        # e c'è un debito minimo di 1000 Mld.
         safe_tesoro = max(1, tesoro)
         if debito > 1000 and debito > (safe_tesoro * 20):
             return "DEFAULT SOVRANO: Il debito pubblico è fuori controllo. I mercati internazionali si rifiutano di acquistare i tuoi titoli. Lo stato è in bancarotta."
-
         return None
 
     def trigger_game_over(self, reason: str) -> Dict[str, Any]:
-        """Forza l'AI a generare un report epico di Game Over."""
         self.game_state["game_over"] = True
         self.game_state["game_over_reason"] = reason
         country = self.game_state["selected_country"]
@@ -310,7 +311,8 @@ class GameEngine:
             response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
         except Exception as e:
-            return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n(Errore generazione AI: {e})",
+            # Usciamo con l'ammortizzatore se il game over sbatte sul limite 429
+            return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n({self._format_api_error(e)})",
                     "new_date": self.get_current_date_str()}
 
     def process_action(self, action_internal: str, action_economy: str, action_diplomacy: str, time_jump_text: str) -> \
@@ -393,12 +395,13 @@ class GameEngine:
             self.game_state["history_log"].insert(0, log_entry)
             if len(self.game_state["history_log"]) > 15: self.game_state["history_log"].pop()
 
-            # -- CONTROLLO DEL GAME OVER DOPO IL TURNO --
             game_over_reason = self._check_game_over_conditions()
             if game_over_reason:
                 return self.trigger_game_over(game_over_reason)
 
             return {"status": "success", "response": clean_text, "new_date": new_date_str}
+
         except Exception as e:
             self.game_state["current_date"] -= delta
-            return {"status": "error", "message": f"Errore API Gemini: {str(e)}"}
+            # Usa il nuovo ammortizzatore globale!
+            return {"status": "error", "message": self._format_api_error(e)}
