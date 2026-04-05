@@ -3,6 +3,8 @@ name: Build Windows Installer
 on:
   push:
     branches: [ "master", "main" ]
+    paths:
+      - 'version.txt' # Il server partirà SOLO se viene modificato questo file
   workflow_dispatch:
 
 jobs:
