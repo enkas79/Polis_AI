@@ -1,0 +1,165 @@
+{
+    "scenario_id": "2024_modern",
+    "name": "Mondo Moderno (2024)",
+    "start_year": 2024,
+    "global_context": "Siamo nell'anno 2024. Il mondo affronta tensioni geopolitiche crescenti a causa del conflitto in Est Europa, la competizione tecnologica tra USA e Cina e le sfide della transizione energetica globale.",
+    "nations_data": {
+        "United States of America": {
+            "treasury_billions": 1500,
+            "public_debt_billions": 34000,
+            "population_millions": 334.9,
+            "stability": 65,
+            "economy": 80,
+            "reputation": 85,
+            "resources": "Tecnologia (40%), Finanza (30%), Armamenti (20%)",
+            "factions": [
+                "NATO",
+                "G7",
+                "AUKUS"
+            ],
+            "initial_relations": {
+                "CHINA": -50,
+                "RUSSIA": -85,
+                "FRANCE": 80,
+                "GERMANY": 85,
+                "JAPAN": 90,
+                "ITALY": 80
+            }
+        },
+        "China": {
+            "treasury_billions": 3200,
+            "public_debt_billions": 14000,
+            "population_millions": 1412.0,
+            "stability": 80,
+            "economy": 75,
+            "reputation": 60,
+            "resources": "Manifattura (45%), Terre Rare (35%), Tecnologia (20%)",
+            "factions": [
+                "BRICS",
+                "SCO"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": -50,
+                "RUSSIA": 75,
+                "JAPAN": -40,
+                "GERMANY": 10
+            }
+        },
+        "Russia": {
+            "treasury_billions": 600,
+            "public_debt_billions": 350,
+            "population_millions": 144.2,
+            "stability": 70,
+            "economy": 50,
+            "reputation": 20,
+            "resources": "Gas Naturale (40%), Petrolio (35%), Armamenti (15%)",
+            "factions": [
+                "BRICS",
+                "CSTO",
+                "CSI"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": -85,
+                "CHINA": 75,
+                "GERMANY": -70,
+                "FRANCE": -70,
+                "ITALY": -60
+            }
+        },
+        "Italy": {
+            "treasury_billions": 150,
+            "public_debt_billions": 2900,
+            "population_millions": 58.9,
+            "stability": 65,
+            "economy": 60,
+            "reputation": 75,
+            "resources": "Manifattura di Lusso (35%), Turismo (30%), Agroalimentare (25%)",
+            "factions": [
+                "NATO",
+                "Unione Europea",
+                "G7"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": 80,
+                "FRANCE": 70,
+                "GERMANY": 75,
+                "RUSSIA": -60,
+                "CHINA": 0
+            }
+        },
+        "France": {
+            "treasury_billions": 250,
+            "public_debt_billions": 3200,
+            "population_millions": 68.0,
+            "stability": 60,
+            "economy": 70,
+            "reputation": 80,
+            "resources": "Energia Nucleare (35%), Lusso (25%), Aerospaziale (20%)",
+            "factions": [
+                "NATO",
+                "Unione Europea",
+                "G7"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": 80,
+                "GERMANY": 85,
+                "ITALY": 70,
+                "RUSSIA": -70,
+                "CHINA": -10
+            }
+        },
+        "Germany": {
+            "treasury_billions": 300,
+            "public_debt_billions": 2700,
+            "population_millions": 83.3,
+            "stability": 75,
+            "economy": 75,
+            "reputation": 85,
+            "resources": "Automotive (40%), Ingegneria (30%), Chimica (20%)",
+            "factions": [
+                "NATO",
+                "Unione Europea",
+                "G7"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": 85,
+                "FRANCE": 85,
+                "ITALY": 75,
+                "RUSSIA": -70,
+                "CHINA": 10
+            }
+        },
+        "Japan": {
+            "treasury_billions": 1200,
+            "public_debt_billions": 9200,
+            "population_millions": 125.1,
+            "stability": 85,
+            "economy": 70,
+            "reputation": 90,
+            "resources": "Elettronica (35%), Automotive (30%), Robotica (20%)",
+            "factions": [
+                "G7",
+                "Quad"
+            ],
+            "initial_relations": {
+                "UNITED STATES OF AMERICA": 90,
+                "CHINA": -40,
+                "RUSSIA": -50,
+                "GERMANY": 80
+            }
+        },
+        "Spain": {
+            "treasury_billions": 65,
+            "public_debt_billions": 1570,
+            "population_millions": 48.0,
+            "stability": 70,
+            "economy": 70,
+            "reputation": 70,
+            "resources": "Tourism 45%, Agricultural Products 30%, Renewable Energy 25%",
+            "factions": [
+                "Blocco di Sinistra",
+                "Blocco di Destra"
+            ]
+        }
+    }
+}
