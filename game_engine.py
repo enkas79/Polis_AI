@@ -8,6 +8,7 @@ from config_manager import ConfigManager
 
 try:
     from google import genai
+
     GEMINI_AVAILABLE: bool = True
 except ImportError:
     GEMINI_AVAILABLE: bool = False
@@ -30,7 +31,7 @@ class GameEngine:
 
         if not os.path.exists("scenarios"):
             os.makedirs("scenarios")
-            
+
         if not os.path.exists("saves"):
             os.makedirs("saves")
 
@@ -145,7 +146,7 @@ class GameEngine:
         )
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             match = re.search(r'\[INIT\]\s*TESORO:\s*(-?[\d\.,]+)\s*\|\s*DEBITO:\s*([\d\.,]+)\s*\|\s*POP:\s*([\d\.,]+)',
                               response.text, re.IGNORECASE)
             if match:
@@ -164,12 +165,23 @@ class GameEngine:
         self.game_state["stats"]["public_debt_billions"] = 50
         self.game_state["stats"]["population_millions"] = 10.0
 
-    def get_current_country(self) -> Optional[str]: return self.game_state.get("selected_country")
-    def get_current_date_str(self) -> str: return self.game_state["current_date"].strftime("%d %B %Y")
-    def get_stats(self) -> Dict[str, Any]: return self.game_state["stats"]
-    def get_history(self) -> list: return self.game_state["history_log"]
-    def get_relations(self) -> Dict[str, int]: return self.game_state.get("relations", {})
-    def is_game_over(self) -> bool: return self.game_state.get("game_over", False)
+    def get_current_country(self) -> Optional[str]:
+        return self.game_state.get("selected_country")
+
+    def get_current_date_str(self) -> str:
+        return self.game_state["current_date"].strftime("%d %B %Y")
+
+    def get_stats(self) -> Dict[str, Any]:
+        return self.game_state["stats"]
+
+    def get_history(self) -> list:
+        return self.game_state["history_log"]
+
+    def get_relations(self) -> Dict[str, int]:
+        return self.game_state.get("relations", {})
+
+    def is_game_over(self) -> bool:
+        return self.game_state.get("game_over", False)
 
     def get_country_intel(self, target_country: str) -> Dict[str, Any]:
         target_upper = target_country.upper()
@@ -199,7 +211,7 @@ class GameEngine:
 
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
@@ -269,7 +281,8 @@ class GameEngine:
                 self.game_state["stats"]["treasury_billions"] = self._normalize_billions(t_val)
                 self.game_state["stats"]["public_debt_billions"] = self._normalize_billions(d_val)
                 self.game_state["stats"]["population_millions"] = float(stats_match.group(6).replace(',', '.'))
-            except ValueError: pass
+            except ValueError:
+                pass
             ai_response = re.sub(stats_pattern, '', ai_response, flags=re.IGNORECASE)
 
         dip_pattern = r'\[DIPLOMAZIA\]\s*(.*)'
@@ -284,26 +297,28 @@ class GameEngine:
                         try:
                             val = int(val.strip())
                             current_val = self.game_state["relations"].get(country_name.strip().upper(), 0)
-                            self.game_state["relations"][country_name.strip().upper()] = max(-100, min(100, current_val + val))
-                        except ValueError: pass
+                            self.game_state["relations"][country_name.strip().upper()] = max(-100, min(100,
+                                                                                                       current_val + val))
+                        except ValueError:
+                            pass
             ai_response = re.sub(dip_pattern, '', ai_response, flags=re.IGNORECASE)
 
         return ai_response.strip()
 
     def _check_game_over_conditions(self) -> Optional[str]:
         stats = self.game_state["stats"]
-        
+
         if stats["stability"] <= 0:
             return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
-            
+
         tesoro = stats["treasury_billions"]
         debito = stats["public_debt_billions"]
         economia = stats["economy"]
         safe_tesoro = max(1, tesoro)
-        
+
         if debito > 1000 and debito > (safe_tesoro * 50) and economia < 30:
             return "DEFAULT SOVRANO: Il debito pubblico è insostenibile e l'economia è in grave recessione. I mercati si rifiutano di comprare i tuoi titoli. Sei in bancarotta."
-            
+
         return None
 
     def trigger_game_over(self, reason: str) -> Dict[str, Any]:
@@ -319,14 +334,17 @@ class GameEngine:
         )
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
         except Exception as e:
-            return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n({self._format_api_error(e)})", "new_date": self.get_current_date_str()}
+            return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n({self._format_api_error(e)})",
+                    "new_date": self.get_current_date_str()}
 
-    def process_action(self, action_internal: str, action_economy: str, action_diplomacy: str, time_jump_text: str) -> Dict[str, Any]:
+    def process_action(self, action_internal: str, action_economy: str, action_diplomacy: str, time_jump_text: str) -> \
+    Dict[str, Any]:
         if self.game_state.get("game_over"):
-            return {"status": "error", "message": "GAME OVER. Il tuo governo è caduto. Inizia una nuova partita dal menu."}
+            return {"status": "error",
+                    "message": "GAME OVER. Il tuo governo è caduto. Inizia una nuova partita dal menu."}
 
         if not GEMINI_AVAILABLE: return {"status": "error", "message": "google-genai non installato."}
         if not self.gemini_client: return {"status": "error", "message": "Nessuna API Key configurata."}
@@ -334,13 +352,17 @@ class GameEngine:
         country = self.game_state.get("selected_country")
         if not country: return {"status": "error", "message": "Nessuna nazione selezionata."}
 
-        if time_jump_text == "1 Giorno": delta = datetime.timedelta(days=1)
-        elif time_jump_text == "1 Settimana": delta = datetime.timedelta(weeks=1)
-        elif time_jump_text == "1 Mese": delta = datetime.timedelta(days=30)
-        else: delta = datetime.timedelta(days=1)
+        if time_jump_text == "1 Giorno":
+            delta = datetime.timedelta(days=1)
+        elif time_jump_text == "1 Settimana":
+            delta = datetime.timedelta(weeks=1)
+        elif time_jump_text == "1 Mese":
+            delta = datetime.timedelta(days=30)
+        else:
+            delta = datetime.timedelta(days=1)
 
         old_date_str = self.get_current_date_str()
-        
+
         old_date_obj = self.game_state["current_date"]
         self.game_state["current_date"] += delta
         new_date_obj = self.game_state["current_date"]
@@ -351,7 +373,8 @@ class GameEngine:
         faction_context = f"Appartiene a: {', '.join(player_factions)}." if player_factions else "Nazione non allineata."
 
         relations_list = [f"{k}({v})" for k, v in self.game_state["relations"].items() if v != 0]
-        relations_context = "Relazioni diplomatiche: " + (", ".join(relations_list) if relations_list else "Neutre con tutti.")
+        relations_context = "Relazioni diplomatiche: " + (
+            ", ".join(relations_list) if relations_list else "Neutre con tutti.")
 
         if action_internal or action_economy or action_diplomacy:
             action_phrase = (
@@ -380,7 +403,7 @@ class GameEngine:
         # --- CONTROLLO EVENTI STORICI (EFFETTO FARFALLA) ---
         historical_prompt = ""
         triggered_events = []
-        
+
         for evt in self.master_timeline:
             try:
                 evt_date = datetime.date.fromisoformat(evt["date"])
@@ -388,7 +411,7 @@ class GameEngine:
                     triggered_events.append(evt)
             except ValueError:
                 pass
-                
+
         if triggered_events:
             historical_prompt = "\n⚠️ EVENTI STORICI PREVISTI IN QUESTI GIORNI ⚠️\n"
             for evt in triggered_events:
@@ -429,7 +452,7 @@ class GameEngine:
 
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             clean_text = self._parse_and_update_engine_data(response.text)
 
             history_package = {
