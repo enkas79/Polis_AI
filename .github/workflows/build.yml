@@ -47,3 +47,14 @@ jobs:
       with:
         name: Polis_AI_Installer_v${{ env.VERSION }}
         path: Output/Polis_AI_Setup_v${{ env.VERSION }}.exe
+        
+    # --- CREA LA RELEASE PUBBLICA IN AUTOMATICO ---
+    - name: Pubblica la Release su GitHub
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ env.VERSION }}
+        name: Polis_AI v${{ env.VERSION }}
+        body: "Aggiornamento automatico rilasciato. Scarica l'installer qui sotto!"
+        files: Output/Polis_AI_Setup_v${{ env.VERSION }}.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
