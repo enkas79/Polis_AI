@@ -14,6 +14,13 @@ except ImportError:
 
 
 class GameEngine:
+    # --- NUOVO FILTRO NUMERI ---
+    def _normalize_billions(self, value: int) -> int:
+        """Se l'IA restituisce la cifra intera invece che in miliardi, la corregge."""
+        if abs(value) >= 1000000:
+            return value // 1000000000
+        return value
+
     def __init__(self) -> None:
         self.api_key: str = ConfigManager.load_api_key()
         self.gemini_client: Optional[Any] = None
@@ -136,8 +143,10 @@ class GameEngine:
             match = re.search(r'\[INIT\]\s*TESORO:\s*(-?[\d\.,]+)\s*\|\s*DEBITO:\s*([\d\.,]+)\s*\|\s*POP:\s*([\d\.,]+)',
                               response.text, re.IGNORECASE)
             if match:
-                self.game_state["stats"]["treasury_billions"] = int(match.group(1).replace('.', '').replace(',', ''))
-                self.game_state["stats"]["public_debt_billions"] = int(match.group(2).replace('.', '').replace(',', ''))
+                t_val = int(match.group(1).replace('.', '').replace(',', ''))
+                d_val = int(match.group(2).replace('.', '').replace(',', ''))
+                self.game_state["stats"]["treasury_billions"] = self._normalize_billions(t_val)
+                self.game_state["stats"]["public_debt_billions"] = self._normalize_billions(d_val)
                 self.game_state["stats"]["population_millions"] = float(match.group(3).replace(',', '.'))
             else:
                 self._apply_fallback_stats()
@@ -257,10 +266,10 @@ class GameEngine:
                 self.game_state["stats"]["stability"] = max(0, min(100, int(stats_match.group(1))))
                 self.game_state["stats"]["economy"] = max(0, min(100, int(stats_match.group(2))))
                 self.game_state["stats"]["reputation"] = max(0, min(100, int(stats_match.group(3))))
-                self.game_state["stats"]["treasury_billions"] = int(
-                    stats_match.group(4).replace('.', '').replace(',', ''))
-                self.game_state["stats"]["public_debt_billions"] = int(
-                    stats_match.group(5).replace('.', '').replace(',', ''))
+                t_val = int(stats_match.group(4).replace('.', '').replace(',', ''))
+                d_val = int(stats_match.group(5).replace('.', '').replace(',', ''))
+                self.game_state["stats"]["treasury_billions"] = self._normalize_billions(t_val)
+                self.game_state["stats"]["public_debt_billions"] = self._normalize_billions(d_val)
                 self.game_state["stats"]["population_millions"] = float(stats_match.group(6).replace(',', '.'))
             except ValueError:
                 pass

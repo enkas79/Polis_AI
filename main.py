@@ -331,6 +331,11 @@ class MainWindow(QMainWindow):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.engine.reset_game()
+            # --- SVUOTA LE CASELLE DI TESTO ---
+            self.input_internal.clear()
+            self.input_economy.clear()
+            self.input_diplomacy.clear()
+
             self.update_ui_from_state()
             self.show_startup_scenario_dialog()
 
