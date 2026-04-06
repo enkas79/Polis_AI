@@ -14,16 +14,21 @@ os.environ["QTWEBENGINE_DISABLE_HARDWARE_ACCELERATION"] = "1"
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     from PyQt6.QtWebEngineCore import QWebEnginePage
+
     WEB_ENGINE_AVAILABLE: bool = True
 except ImportError:
     WEB_ENGINE_AVAILABLE: bool = False
-    class QWebEnginePage: pass
+
+
+    class QWebEnginePage:
+        pass
 
 from game_engine import GameEngine
 from map_manager import MapManager
 from ui_components import ReportDialog, ApiDialog, ScenarioSelectionDialog, CountryIntelDialog, AdvancedStatsDialog
 from ui_menu import setup_menu_bar
 from auto_updater import AutoUpdater
+
 
 # =========================================================
 # CLASSI WORKER (MULTI-THREADING PER L'AI)
@@ -86,7 +91,6 @@ class MainWindow(QMainWindow):
         self._check_api_on_startup()
         self.update_ui_from_state()
 
-        # Timer avvio scenario e aggiornamenti automatici silenti
         QTimer.singleShot(500, self.show_startup_scenario_dialog)
         QTimer.singleShot(2000, self.check_updates)
 
@@ -94,13 +98,81 @@ class MainWindow(QMainWindow):
         current_version = AutoUpdater.get_local_version()
         self.setWindowTitle(f"Polis_AI - Geopolitical Simulator (v{current_version})")
         self.resize(1400, 900)
-
         self.setup_menu()
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
 
+        # Layout Radice (Contiene Top Bar e Contenuto Mappa/Sidebar)
+        root_layout = QVBoxLayout(central_widget)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        # =========================================================
+        # 1. TOP BAR (CRUSCOTTO NAZIONALE SUPERIORE)
+        # =========================================================
+        top_bar_frame = QFrame()
+        top_bar_frame.setStyleSheet("background-color: #2c3e50; color: white;")
+        top_bar_frame.setMinimumHeight(45)
+        top_bar_frame.setMaximumHeight(45)
+
+        top_layout = QHBoxLayout(top_bar_frame)
+        top_layout.setContentsMargins(15, 0, 15, 0)
+
+        # Valori Finanziari e Demografici
+        self.lbl_treasury = QLabel("💰 Tesoro: --")
+        self.lbl_treasury.setStyleSheet("color: #2ecc71; font-weight: bold; font-size: 13px;")
+        top_layout.addWidget(self.lbl_treasury)
+
+        self.lbl_debt = QLabel("📉 Debito: --")
+        self.lbl_debt.setStyleSheet("color: #e74c3c; font-weight: bold; font-size: 13px;")
+        top_layout.addWidget(self.lbl_debt)
+
+        self.lbl_population = QLabel("👥 Pop: -- Mln")
+        self.lbl_population.setStyleSheet("color: white; font-weight: bold; font-size: 13px;")
+        top_layout.addWidget(self.lbl_population)
+
+        top_layout.addSpacing(30)
+
+        # Barre di Progresso
+        lbl_stab = QLabel("👑 Stabilità:")
+        lbl_stab.setStyleSheet("font-size: 12px; font-weight: bold;")
+        top_layout.addWidget(lbl_stab)
+
+        self.bar_stability = self.create_progress_bar("Stabilità Interna (Ordine pubblico, Consenso)", "#3498db")
+        self.bar_stability.setFixedSize(120, 14)
+        top_layout.addWidget(self.bar_stability)
+
+        top_layout.addSpacing(15)
+
+        lbl_eco = QLabel("📈 Economia:")
+        lbl_eco.setStyleSheet("font-size: 12px; font-weight: bold;")
+        top_layout.addWidget(lbl_eco)
+
+        self.bar_economy = self.create_progress_bar("Salute Economica (PIL, Occupazione, Industria)", "#f1c40f")
+        self.bar_economy.setFixedSize(120, 14)
+        top_layout.addWidget(self.bar_economy)
+
+        top_layout.addStretch()
+
+        # Pulsante Statistiche Complete a destra
+        self.btn_adv_stats = QPushButton("📊 Archivio di Stato")
+        self.btn_adv_stats.setStyleSheet(
+            "background-color: #ecf0f1; color: #2c3e50; font-weight: bold; padding: 4px 10px; border-radius: 3px;")
+        self.btn_adv_stats.clicked.connect(self.show_advanced_stats)
+        top_layout.addWidget(self.btn_adv_stats)
+
+        root_layout.addWidget(top_bar_frame)
+
+        # =========================================================
+        # 2. CONTENUTO PRINCIPALE (Mappa a sx, Pannello a dx)
+        # =========================================================
+        content_widget = QWidget()
+        main_layout = QHBoxLayout(content_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.addWidget(content_widget)
+
+        # Mappa WebEngine
         if WEB_ENGINE_AVAILABLE:
             try:
                 self.web_view = QWebEngineView()
@@ -113,14 +185,15 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 self.render_fallback_map(main_layout, f"Errore WebEngine: {e}")
         else:
-            self.render_fallback_map(main_layout, "Modulo 'PyQt6-WebEngine' mancante. Installa con: pip install PyQt6-WebEngine")
+            self.render_fallback_map(main_layout, "Modulo 'PyQt6-WebEngine' mancante.")
 
+        # Pannello Laterale
         side_container = QWidget()
         side_container.setMaximumWidth(380)
         side_panel = QVBoxLayout(side_container)
         side_panel.setContentsMargins(15, 10, 15, 10)
 
-        # 1. Info Paese Base
+        # Nazione e Data
         status_frame = QFrame()
         status_frame.setStyleSheet("background-color: #ecf0f1; border-radius: 6px; border: 1px solid #bdc3c7;")
         status_layout = QVBoxLayout(status_frame)
@@ -138,37 +211,62 @@ class MainWindow(QMainWindow):
         status_layout.addWidget(self.lbl_date)
         side_panel.addWidget(status_frame)
 
-        # 🛑 GAME OVER BANNER
+        # Banner Game Over
         self.lbl_game_over = QLabel("<b>IL TUO GOVERNO È CADUTO</b>")
-        self.lbl_game_over.setStyleSheet("background-color: #c0392b; color: white; padding: 10px; font-size: 16px; border-radius: 5px;")
+        self.lbl_game_over.setStyleSheet(
+            "background-color: #c0392b; color: white; padding: 10px; font-size: 16px; border-radius: 5px;")
         self.lbl_game_over.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_game_over.setVisible(False)
         side_panel.addWidget(self.lbl_game_over)
 
-        # 2. Input Comandi a Ministeri
-        side_panel.addSpacing(5)
-        lbl_direttive = QLabel("<b>Direttive Ministeriali:</b>")
-        side_panel.addWidget(lbl_direttive)
+        # ---------------------------------------------------------
+        # Direttive Ministeriali con TOOLTIPS
+        # ---------------------------------------------------------
+        side_panel.addSpacing(10)
 
+        # Helper function per creare label con punto di domanda
+        def create_help_label(testo: str, tooltip_html: str) -> QLabel:
+            lbl = QLabel(f"<b>{testo}</b> <span style='color:#2980b9; cursor:help;'>(?)</span>")
+            lbl.setToolTip(f"<div style='font-size: 12px; padding: 3px;'>{tooltip_html}</div>")
+            return lbl
+
+        lbl_int = create_help_label(
+            "Politica Interna",
+            "<b>Cosa scrivere qui:</b><br>• Riforme della Giustizia e Polizia<br>• Sanità e Istruzione<br>• Diritti civili e Costituzione<br>• Gestione proteste e scioperi"
+        )
+        side_panel.addWidget(lbl_int)
         self.input_internal = QTextEdit()
-        self.input_internal.setPlaceholderText("Politica Interna (es: riforme, polizia...)")
-        self.input_internal.setStyleSheet("font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
-        self.input_internal.setMaximumHeight(42)
+        self.input_internal.setStyleSheet(
+            "font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
+        self.input_internal.setMinimumHeight(65)
+        self.input_internal.setMaximumHeight(85)
         side_panel.addWidget(self.input_internal)
 
+        lbl_eco = create_help_label(
+            "Economia e Finanze",
+            "<b>Cosa scrivere qui:</b><br>• Tasse (Aumento/Taglio)<br>• Sussidi alle aziende<br>• Grandi opere e Infrastrutture<br>• Accordi commerciali (Import/Export)<br>• Nazionalizzazioni/Privatizzazioni"
+        )
+        side_panel.addWidget(lbl_eco)
         self.input_economy = QTextEdit()
-        self.input_economy.setPlaceholderText("Economia (es: tasse, infrastrutture...)")
-        self.input_economy.setStyleSheet("font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
-        self.input_economy.setMaximumHeight(42)
+        self.input_economy.setStyleSheet(
+            "font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
+        self.input_economy.setMinimumHeight(65)
+        self.input_economy.setMaximumHeight(85)
         side_panel.addWidget(self.input_economy)
 
+        lbl_dip = create_help_label(
+            "Difesa ed Esteri",
+            "<b>Cosa scrivere qui:</b><br>• Spostamento o reclutamento Truppe<br>• Proposte di Alleanza<br>• Dichiarazioni di Guerra<br>• Spionaggio ed Embarghi<br>• Aiuti militari ad altre nazioni"
+        )
+        side_panel.addWidget(lbl_dip)
         self.input_diplomacy = QTextEdit()
-        self.input_diplomacy.setPlaceholderText("Difesa & Esteri (es: truppe, alleanze...)")
-        self.input_diplomacy.setStyleSheet("font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
-        self.input_diplomacy.setMaximumHeight(42)
+        self.input_diplomacy.setStyleSheet(
+            "font-size: 13px; padding: 4px; border: 1px solid #95a5a6; border-radius: 4px;")
+        self.input_diplomacy.setMinimumHeight(65)
+        self.input_diplomacy.setMaximumHeight(85)
         side_panel.addWidget(self.input_diplomacy)
 
-        # 3. Avanzamento e Esecuzione
+        # Avanzamento e Esecuzione
         action_bar_layout = QHBoxLayout()
         self.combo_time = QComboBox()
         self.combo_time.addItems(["1 Giorno", "1 Settimana", "1 Mese"])
@@ -177,97 +275,55 @@ class MainWindow(QMainWindow):
 
         self.btn_send = QPushButton("Esegui Turno")
         self.btn_send.setMinimumHeight(38)
-        self.btn_send.setStyleSheet("font-weight: bold; font-size: 14px; background-color: #27ae60; color: white; border-radius: 4px;")
+        self.btn_send.setStyleSheet(
+            "font-weight: bold; font-size: 14px; background-color: #27ae60; color: white; border-radius: 4px;")
         self.btn_send.clicked.connect(self.handle_action)
         action_bar_layout.addWidget(self.btn_send, stretch=1)
         side_panel.addLayout(action_bar_layout)
-        side_panel.addSpacing(5)
+        side_panel.addSpacing(10)
 
-        # 4. Cruscotto (Stats)
-        stats_group = QGroupBox("Cruscotto Nazionale")
-        stats_group.setStyleSheet("font-weight: bold; font-size: 12px;")
-        stats_layout = QVBoxLayout()
-        stats_layout.setContentsMargins(5, 5, 5, 5)
-
-        budget_layout = QHBoxLayout()
-        self.lbl_treasury = QLabel("Tesoro: <b>--</b>")
-        self.lbl_treasury.setStyleSheet("color: #27ae60; font-size: 12px;")
-        self.lbl_treasury.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-        self.lbl_debt = QLabel("Debito: <b>--</b>")
-        self.lbl_debt.setStyleSheet("color: #c0392b; font-size: 12px;")
-        self.lbl_debt.setAlignment(Qt.AlignmentFlag.AlignRight)
-
-        budget_layout.addWidget(self.lbl_treasury)
-        budget_layout.addWidget(self.lbl_debt)
-        stats_layout.addLayout(budget_layout)
-
-        self.lbl_population = QLabel("Popolazione: <b>-- Milioni</b>")
-        self.lbl_population.setStyleSheet("color: #2980b9; font-size: 13px; margin-bottom: 5px;")
-        self.lbl_population.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        stats_layout.addWidget(self.lbl_population)
-
-        self.bar_stability = self.create_progress_bar("Stabilità Interna", "#3498db")
-        stats_layout.addWidget(QLabel("Stabilità Interna:"))
-        stats_layout.addWidget(self.bar_stability)
-
-        self.bar_economy = self.create_progress_bar("Salute Economica", "#f1c40f")
-        stats_layout.addWidget(QLabel("Salute Economica:"))
-        stats_layout.addWidget(self.bar_economy)
-
-        # Pulsante Statistiche Avanzate
-        self.btn_adv_stats = QPushButton("📊 Statistiche Complete")
-        self.btn_adv_stats.setStyleSheet("background-color: #34495e; color: white; font-size: 11px; padding: 4px; border-radius: 3px;")
-        self.btn_adv_stats.clicked.connect(self.show_advanced_stats)
-        stats_layout.addWidget(self.btn_adv_stats)
-
-        stats_group.setLayout(stats_layout)
-        side_panel.addWidget(stats_group)
-
-        # 5. Relazioni Estere
-        diplomacy_group = QGroupBox("Relazioni Estere")
+        # Relazioni Estere (Ora ha più spazio!)
+        diplomacy_group = QGroupBox("Relazioni Estere e Alleanze")
         diplomacy_group.setStyleSheet("font-weight: bold; font-size: 12px;")
         diplomacy_layout = QVBoxLayout()
-        diplomacy_layout.setContentsMargins(5, 2, 5, 2)
+        diplomacy_layout.setContentsMargins(5, 5, 5, 5)
 
         self.list_diplomacy = QListWidget()
-        self.list_diplomacy.setStyleSheet("font-weight: normal; font-size: 11px; background-color: #fdfdfd; border: 1px solid #dcdde1;")
-        self.list_diplomacy.setMaximumHeight(65)
+        self.list_diplomacy.setStyleSheet(
+            "font-weight: normal; font-size: 11px; background-color: #fdfdfd; border: 1px solid #dcdde1;")
+        self.list_diplomacy.setMinimumHeight(80)
         diplomacy_layout.addWidget(self.list_diplomacy)
         diplomacy_group.setLayout(diplomacy_layout)
         side_panel.addWidget(diplomacy_group, stretch=1)
 
-        # 6. Cronologia Eventi
-        history_group = QGroupBox("Cronologia Storica")
+        # Cronologia Eventi (Ora ha più spazio!)
+        history_group = QGroupBox("Archivio Storico (Doppio clic per leggere)")
         history_group.setStyleSheet("font-weight: bold; font-size: 12px;")
         history_layout = QVBoxLayout()
-        history_layout.setContentsMargins(5, 2, 5, 2)
+        history_layout.setContentsMargins(5, 5, 5, 5)
 
         self.list_history = QListWidget()
-        self.list_history.setStyleSheet("font-weight: normal; font-size: 11px; background-color: #fdfdfd; border: 1px solid #dcdde1;")
-        self.list_history.setMaximumHeight(65)
+        self.list_history.setStyleSheet(
+            "font-weight: normal; font-size: 11px; background-color: #fdfdfd; border: 1px solid #dcdde1;")
+        self.list_history.setMinimumHeight(100)
         self.list_history.itemDoubleClicked.connect(self.handle_history_click)
         history_layout.addWidget(self.list_history)
         history_group.setLayout(history_layout)
-        side_panel.addWidget(history_group, stretch=1)
+        side_panel.addWidget(history_group, stretch=2)
 
-        # 7. BARRA DI STATO ASINCRONA
+        # Barra di caricamento asincrona
         self.loading_layout = QVBoxLayout()
-        self.lbl_loading = QLabel("Ricezione dispacci diplomatici in corso...")
+        self.lbl_loading = QLabel("Ricezione dispacci in corso...")
         self.lbl_loading.setStyleSheet("color: #2980b9; font-weight: bold; font-size: 12px; font-style: italic;")
         self.lbl_loading.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         self.progress_loading = QProgressBar()
         self.progress_loading.setRange(0, 0)
         self.progress_loading.setFixedHeight(10)
-
         self.loading_layout.addWidget(self.lbl_loading)
         self.loading_layout.addWidget(self.progress_loading)
-
         self.lbl_loading.setVisible(False)
         self.progress_loading.setVisible(False)
         side_panel.addLayout(self.loading_layout)
-        side_panel.addSpacing(5)
 
         # Tasto Uscita
         self.btn_exit = QPushButton("Esci dal Gioco")
@@ -283,10 +339,9 @@ class MainWindow(QMainWindow):
         bar.setRange(0, 100)
         bar.setValue(50)
         bar.setTextVisible(False)
-        bar.setFixedHeight(8)
         bar.setToolTip(tooltip)
         bar.setStyleSheet(f"""
-            QProgressBar {{ border: 1px solid #bdc3c7; border-radius: 3px; background-color: #ecf0f1; margin-bottom: 2px; }}
+            QProgressBar {{ border: 1px solid #7f8c8d; border-radius: 3px; background-color: #34495e; }}
             QProgressBar::chunk {{ background-color: {color_hex}; border-radius: 2px; }}
         """)
         return bar
@@ -331,11 +386,9 @@ class MainWindow(QMainWindow):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.engine.reset_game()
-            # --- SVUOTA LE CASELLE DI TESTO ---
             self.input_internal.clear()
             self.input_economy.clear()
             self.input_diplomacy.clear()
-
             self.update_ui_from_state()
             self.show_startup_scenario_dialog()
 
@@ -343,7 +396,6 @@ class MainWindow(QMainWindow):
         if not self.engine.get_current_country():
             QMessageBox.warning(self, "Attenzione", "Nessuna nazione selezionata.")
             return
-        # --- CARTELLA SAVES ---
         filepath, _ = QFileDialog.getSaveFileName(self, "Salva Partita", "saves", "Polis_AI Save Files (*.json)")
         if filepath:
             if not filepath.endswith('.json'): filepath += '.json'
@@ -354,7 +406,6 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Errore di Salvataggio", str(e))
 
     def load_game_dialog(self) -> None:
-        # --- CARTELLA SAVES ---
         filepath, _ = QFileDialog.getOpenFileName(self, "Carica Partita", "saves", "Polis_AI Save Files (*.json)")
         if filepath:
             try:
@@ -366,8 +417,8 @@ class MainWindow(QMainWindow):
 
     def update_ui_from_state(self) -> None:
         country = self.engine.get_current_country()
-
         is_game_over = self.engine.is_game_over()
+
         self.lbl_game_over.setVisible(is_game_over)
         self.btn_send.setEnabled(not is_game_over)
         self.input_internal.setEnabled(not is_game_over)
@@ -389,20 +440,22 @@ class MainWindow(QMainWindow):
 
         self.lbl_date.setText(f"Data Corrente: <b>{self.engine.get_current_date_str()}</b>")
 
+        # AGGIORNAMENTO TOP BAR
         stats = self.engine.get_stats()
         self.bar_stability.setValue(stats["stability"])
         self.bar_economy.setValue(stats["economy"])
 
         treasury = stats.get("treasury_billions", 0)
-        t_color = "#27ae60" if treasury >= 0 else "#c0392b"
-        self.lbl_treasury.setText(f"Tesoro: <b style='color:{t_color};'>$ {treasury} Mld</b>")
+        t_color = "#2ecc71" if treasury >= 0 else "#e74c3c"
+        self.lbl_treasury.setText(f"💰 Tesoro: <span style='color:{t_color};'>$ {treasury} Mld</span>")
 
         debt = stats.get("public_debt_billions", 0)
-        self.lbl_debt.setText(f"Debito: <b>$ {debt} Mld</b>")
+        self.lbl_debt.setText(f"📉 Debito: <span style='color:#e74c3c;'>$ {debt} Mld</span>")
 
         pop = stats.get("population_millions", 0.0)
-        self.lbl_population.setText(f"Popolazione: <b>{pop} Milioni</b>")
+        self.lbl_population.setText(f"👥 Popolazione: {pop} Mln")
 
+        # STORIA E DIPLOMAZIA
         self.list_history.clear()
         for item in self.engine.get_history():
             if isinstance(item, str):
@@ -413,7 +466,6 @@ class MainWindow(QMainWindow):
                 self.list_history.addItem(list_item)
 
         self.list_diplomacy.clear()
-
         if country:
             player_data = self.engine.preloaded_nations.get(country.upper(), {})
             factions = player_data.get("factions", [])
@@ -458,7 +510,6 @@ class MainWindow(QMainWindow):
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             success = self.engine.set_country(country_name)
             QApplication.restoreOverrideCursor()
-
             if success:
                 self.update_ui_from_state()
 
@@ -542,40 +593,34 @@ class MainWindow(QMainWindow):
 
         elif result.get("status") == "game_over":
             self.update_ui_from_state()
-
             report_dialog = ReportDialog(result['new_date'], result['response'], self)
             report_dialog.setWindowTitle("REPORT FINALE - GOVERNO CADUTO")
             report_dialog.exec()
-
-            QMessageBox.critical(self, "GAME OVER", "Il tuo governo è caduto. Clicca su 'Nuova Partita' nel menu in alto per ricominciare.")
+            QMessageBox.critical(self, "GAME OVER",
+                                 "Il tuo governo è caduto. Clicca su 'Nuova Partita' nel menu in alto per ricominciare.")
         else:
             QMessageBox.warning(self, "Errore Operativo", result.get("message", "Errore sconosciuto"))
 
     @pyqtSlot()
     def show_advanced_stats(self) -> None:
-        """Apre la finestra delle statistiche avanzate del paese."""
         country = self.engine.get_current_country()
         if not country:
             QMessageBox.information(self, "Attenzione", "Seleziona prima una nazione!")
             return
-
         stats = self.engine.get_stats()
         intel = self.engine.get_country_intel(country)
-
         dialog = AdvancedStatsDialog(country, stats, intel, self)
         dialog.exec()
 
     @pyqtSlot(QListWidgetItem)
     def handle_history_click(self, item: QListWidgetItem) -> None:
-        """Riapre un vecchio dispaccio quando si fa doppio clic sulla cronologia."""
         data = item.data(Qt.ItemDataRole.UserRole)
-
         if data and isinstance(data, dict):
             dialog = ReportDialog(data["date"], data["report"], self)
             dialog.setWindowTitle(f"Rapporto di Archivio - {data['date']}")
             dialog.exec()
         else:
-            QMessageBox.information(self, "Archivio", "Questo è un vecchio evento di sistema. Non ci sono rapporti dettagliati disponibili.")
+            QMessageBox.information(self, "Archivio", "Questo è un vecchio evento di sistema.")
 
 
 if __name__ == "__main__":
@@ -583,5 +628,4 @@ if __name__ == "__main__":
     app.setStyle("Fusion")
     window = MainWindow()
     window.showMaximized()
-    #window.showFullScreen()
     sys.exit(app.exec())

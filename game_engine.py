@@ -2,6 +2,7 @@ import datetime
 import json
 import re
 import os
+import random
 from typing import Optional, Dict, Any, List
 from config_manager import ConfigManager
 
@@ -14,7 +15,6 @@ except ImportError:
 
 
 class GameEngine:
-    # --- NUOVO FILTRO NUMERI ---
     def _normalize_billions(self, value: int) -> int:
         """Se l'IA restituisce la cifra intera invece che in miliardi, la corregge."""
         if abs(value) >= 1000000:
@@ -32,11 +32,9 @@ class GameEngine:
         if not os.path.exists("scenarios"):
             os.makedirs("scenarios")
 
-        # --- CREAZIONE CARTELLA SALVATAGGI ---
         if not os.path.exists("saves"):
             os.makedirs("saves")
 
-        # --- NUOVO: Carica la Master Timeline ---
         self.master_timeline = []
         if os.path.exists("historical_events.json"):
             try:
@@ -64,7 +62,7 @@ class GameEngine:
     def _format_api_error(self, exception: Exception) -> str:
         error_msg = str(exception)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            return "⚠️ SERVER INTELLIGENCE SOVRACCARICHI ⚠️\nHai inviato troppe richieste in poco tempo al Comando Centrale di Google.\n\nPer favore, attendi circa 60 secondi prima di inviare un nuovo ordine o censire una nazione."
+            return "⚠️ SERVER INTELLIGENCE SOVRACCARICHI ⚠️\nHai inviato troppe richieste in poco tempo al Comando Centrale di Google.\n\nPer favore, attendi circa 60 secondi prima di inviare un nuovo ordine."
         return f"Errore di comunicazione con il Comando Centrale:\n{error_msg}"
 
     def get_available_scenarios(self) -> List[Dict[str, str]]:
@@ -96,7 +94,6 @@ class GameEngine:
 
             raw_nations = data.get("nations_data", {})
             self.preloaded_nations = {k.upper(): v for k, v in raw_nations.items()}
-
         except Exception as e:
             print(f"Errore caricamento scenario: {e}")
 
@@ -189,7 +186,6 @@ class GameEngine:
         target_upper = target_country.upper()
         relation = self.game_state.get("relations", {}).get(target_upper, 0)
         is_preloaded = target_upper in self.preloaded_nations
-
         data = self.preloaded_nations.get(target_upper, {})
         resources = data.get("resources", "Dati classificati (Nazione non censita nel database).")
         factions = data.get("factions", [])
@@ -203,7 +199,6 @@ class GameEngine:
         }
 
     def expand_scenario_with_ai(self, country_name: str) -> Dict[str, Any]:
-        # Rimosso il blocco dello scenario: in Sandbox si può censire!
         if not self.gemini_client: return {"status": "error", "message": "API Gemini non configurata."}
 
         year = self.game_state["current_date"].year
@@ -218,7 +213,6 @@ class GameEngine:
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
-            # 1. Se c'è uno scenario, salva i dati in modo permanente nel file JSON
             if self.current_scenario_filename:
                 filepath = os.path.join("scenarios", self.current_scenario_filename)
                 with open(filepath, "r", encoding="utf-8") as f:
@@ -228,18 +222,13 @@ class GameEngine:
                 with open(filepath, "w", encoding="utf-8") as f:
                     json.dump(scenario_data, f, indent=4)
                 messaggio = f"{country_name} è stato censito e salvato nello scenario in modo permanente!"
-
-            # 2. Se siamo in Sandbox, non salva su file ma usa solo la memoria temporanea
             else:
                 messaggio = f"{country_name} è stato censito per l'attuale partita Sandbox!"
 
-            # 3. In entrambi i casi, carica i dati in memoria per giocarci sù
             self.preloaded_nations[country_name.upper()] = new_data
-
             return {"status": "success", "message": messaggio}
 
         except Exception as e:
-            # Usciamo con l'ammortizzatore se il censimento sbatte sul limite 429
             return {"status": "error", "message": self._format_api_error(e)}
 
     def save_game(self, filepath: str) -> None:
@@ -274,8 +263,6 @@ class GameEngine:
             self.preloaded_nations = loaded_state.get("preloaded_nations", {})
             self.current_scenario_filename = loaded_state.get("current_scenario_filename")
             self.game_state = loaded_state
-        except json.JSONDecodeError:
-            raise ValueError("File non valido.")
         except Exception as e:
             raise IOError(f"Impossibile caricare: {str(e)}")
 
@@ -319,19 +306,14 @@ class GameEngine:
     def _check_game_over_conditions(self) -> Optional[str]:
         stats = self.game_state["stats"]
 
-        # 1. Collasso Politico
         if stats["stability"] <= 0:
             return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
 
-        # 2. Bancarotta / Default Sovrano
         tesoro = stats["treasury_billions"]
         debito = stats["public_debt_billions"]
         economia = stats["economy"]
-
         safe_tesoro = max(1, tesoro)
 
-        # REGOLE PIÙ REALISTICHE:
-        # Si fallisce solo se il debito è astronomico (50x il tesoro) E l'economia è sotto il 30/100 (Recessione profonda)
         if debito > 1000 and debito > (safe_tesoro * 50) and economia < 30:
             return "DEFAULT SOVRANO: Il debito pubblico è insostenibile e l'economia è in grave recessione. I mercati si rifiutano di comprare i tuoi titoli. Sei in bancarotta."
 
@@ -377,7 +359,10 @@ class GameEngine:
             delta = datetime.timedelta(days=1)
 
         old_date_str = self.get_current_date_str()
+
+        old_date_obj = self.game_state["current_date"]
         self.game_state["current_date"] += delta
+        new_date_obj = self.game_state["current_date"]
         new_date_str = self.get_current_date_str()
 
         player_data = self.preloaded_nations.get(country.upper(), {})
@@ -413,41 +398,47 @@ class GameEngine:
         scenario_prompt = f"CONTESTO GLOBALE DELLO SCENARIO: {self.scenario_context}\n" if self.scenario_context else ""
 
         # --- CONTROLLO EVENTI STORICI (EFFETTO FARFALLA) ---
-        old_date_obj = self.game_state["current_date"] - delta
-        new_date_obj = self.game_state["current_date"]
-
         historical_prompt = ""
         triggered_events = []
 
         for evt in self.master_timeline:
-            evt_date = datetime.date.fromisoformat(evt["date"])
-            # Se la data dell'evento è compresa tra il vecchio turno e il nuovo turno...
-            if old_date_obj < evt_date <= new_date_obj:
-                triggered_events.append(evt)
+            try:
+                evt_date = datetime.date.fromisoformat(evt["date"])
+                if old_date_obj < evt_date <= new_date_obj:
+                    triggered_events.append(evt)
+            except ValueError:
+                pass
 
         if triggered_events:
             historical_prompt = "\n⚠️ EVENTI STORICI PREVISTI IN QUESTI GIORNI ⚠️\n"
             for evt in triggered_events:
                 historical_prompt += f"- {evt['date']}: {evt['title']} ({evt['description']})\n"
-
-            # La Direttiva Segreta per Gemini!
             historical_prompt += "DIRETTIVA 'EFFETTO FARFALLA': Valuta se questi eventi storici hanno ancora senso logico nel contesto alternativo creato finora dal giocatore. Se sì, falli accadere. Se invece il giocatore ha alterato pesantemente la storia, modifica l'evento o annullalo del tutto spiegando il perché nel tuo resoconto.\n\n"
 
-        # --- ASSEMBLAGGIO DEL PROMPT FINALE ---
+        # --- IL GENERATORE DI CRISI (ROULETTE RUSSA AL 15%) ---
+        random_event_prompt = ""
+        if random.randint(1, 100) <= 15:
+            random_event_prompt = (
+                "\n🔴 EVENTO CASUALE IMPREVISTO (CRISI O BOOM) 🔴\n"
+                "Direttiva Speciale (Ignora per un attimo le direttive standard): "
+                "Inventa dal nulla un grave evento globale appena accaduto. Può essere un disastro naturale, "
+                "una crisi finanziaria asimmetrica, un cyber-attacco globale, una nuova epidemia "
+                "oppure un'improvvisa scoperta tecnologica rivoluzionaria.\n"
+                "Spiega in modo drammatico l'evento, dagli un titolo forte e applica un malus (o bonus) pesantissimo "
+                "ai parametri di Economia, Stabilità o Tesoro del paese del giocatore.\n\n"
+            )
+
         prompt = (
             f"Agisci come il Game Master del simulatore geopolitico 'Polis_AI'.\n"
             f"Data attuale: {new_date_str}. È trascorso: '{time_jump_text}'.\n"
             f"{scenario_prompt}"
             f"{historical_prompt}"
-            f"STATO DEL PAESE:\n- {stats_context}\n- {faction_context}\n- {relations_context}\n\n"
-            # ... il resto del prompt rimane uguale ("REGOLE TASSATIVE PER LA RISPOSTA", ecc.)
-            f"Data attuale: {new_date_str}. È trascorso: '{time_jump_text}'.\n"
-            f"{scenario_prompt}"
+            f"{random_event_prompt}"
             f"STATO DEL PAESE:\n- {stats_context}\n- {faction_context}\n- {relations_context}\n\n"
             f"{action_phrase}\n\n"
             f"REGOLE TASSATIVE PER LA RISPOSTA:\n"
             f"1. BREVITÀ E FORMATTAZIONE: Sii conciso. Usa paragrafi brevi e grassetti.\n"
-            f"2. CONSEGUENZE GEOPOLITICHE: Reagisci alle azioni e usa le alleanze di appartenenza per calcolare le ripercussioni.\n"
+            f"2. CONSEGUENZE GEOPOLITICHE: Reagisci alle azioni e usa le alleanze per le ripercussioni.\n"
             f"3. MONDO VIVO (Globale): Descrivi cosa è successo nel resto del mondo.\n\n"
             f"REGOLE PER CALCOLO DATI E DIPLOMAZIA (FONDAMENTALE):\n"
             f"Alla fine esatta della tua risposta, aggiungi QUESTE DUE RIGHE esatte:\n"
@@ -460,7 +451,6 @@ class GameEngine:
             response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_text = self._parse_and_update_engine_data(response.text)
 
-            # --- MODIFICA: Salvataggio dizionario storico completo ---
             history_package = {
                 "summary": log_entry,
                 "date": new_date_str,
@@ -476,5 +466,5 @@ class GameEngine:
             return {"status": "success", "response": clean_text, "new_date": new_date_str}
 
         except Exception as e:
-            self.game_state["current_date"] -= delta
+            self.game_state["current_date"] = old_date_obj
             return {"status": "error", "message": self._format_api_error(e)}
