@@ -7,6 +7,10 @@ on:
       - 'version.txt' # Il server partirà SOLO se viene modificato questo file
   workflow_dispatch:
 
+# --- NUOVO: DIAMO AL ROBOT IL PERMESSO DI CREARE LA RELEASE ---
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
