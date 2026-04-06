@@ -13,6 +13,7 @@ OutputBaseFilename=Polis_AI_Setup_v{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest
+SetupIconFile=assets\icon.ico
 
 [Files]
 Source: "dist\Polis_AI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
