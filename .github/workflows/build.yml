@@ -34,7 +34,7 @@ jobs:
 
     - name: Compila l'eseguibile con PyInstaller
       run: |
-        pyinstaller --onedir --noconsole --add-data "assets;assets" --add-data "scenarios;scenarios" --name Polis_AI main.py
+        pyinstaller --onedir --noconsole --add-data "assets;assets" --add-data "scenarios;scenarios" --icon "assets/icon.ico" --name Polis_AI main.py
 
     # --- INNO SETUP ORA RICEVE LA VERSIONE DINAMICA ---
     - name: Compila il Setup con Inno Setup
