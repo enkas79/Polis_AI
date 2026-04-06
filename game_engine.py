@@ -194,7 +194,7 @@ class GameEngine:
         }
 
     def expand_scenario_with_ai(self, country_name: str) -> Dict[str, Any]:
-        if not self.current_scenario_filename: return {"status": "error", "message": "Nessuno scenario caricato."}
+        # Rimosso il blocco dello scenario: in Sandbox si può censire!
         if not self.gemini_client: return {"status": "error", "message": "API Gemini non configurata."}
 
         year = self.game_state["current_date"].year
@@ -209,16 +209,28 @@ class GameEngine:
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
-            filepath = os.path.join("scenarios", self.current_scenario_filename)
-            with open(filepath, "r", encoding="utf-8") as f:
-                scenario_data = json.load(f)
-            if "nations_data" not in scenario_data: scenario_data["nations_data"] = {}
-            scenario_data["nations_data"][country_name.title()] = new_data
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(scenario_data, f, indent=4)
+            # 1. Se c'è uno scenario, salva i dati in modo permanente nel file JSON
+            if self.current_scenario_filename:
+                filepath = os.path.join("scenarios", self.current_scenario_filename)
+                with open(filepath, "r", encoding="utf-8") as f:
+                    scenario_data = json.load(f)
+                if "nations_data" not in scenario_data: scenario_data["nations_data"] = {}
+                scenario_data["nations_data"][country_name.title()] = new_data
+                with open(filepath, "w", encoding="utf-8") as f:
+                    json.dump(scenario_data, f, indent=4)
+                messaggio = f"{country_name} è stato censito e salvato nello scenario in modo permanente!"
+
+            # 2. Se siamo in Sandbox, non salva su file ma usa solo la memoria temporanea
+            else:
+                messaggio = f"{country_name} è stato censito per l'attuale partita Sandbox!"
+
+            # 3. In entrambi i casi, carica i dati in memoria per giocarci sù
             self.preloaded_nations[country_name.upper()] = new_data
-            return {"status": "success", "message": f"{country_name} è stato censito!"}
+
+            return {"status": "success", "message": messaggio}
+
         except Exception as e:
+            # Usciamo con l'ammortizzatore se il censimento sbatte sul limite 429
             return {"status": "error", "message": self._format_api_error(e)}
 
     def save_game(self, filepath: str) -> None:
