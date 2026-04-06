@@ -36,6 +36,15 @@ class GameEngine:
         if not os.path.exists("saves"):
             os.makedirs("saves")
 
+        # --- NUOVO: Carica la Master Timeline ---
+        self.master_timeline = []
+            if os.path.exists("historical_events.json"):
+                try:
+                    with open("historical_events.json", "r", encoding="utf-8") as f:
+                        self.master_timeline = json.load(f)
+                except Exception as e:
+                    print(f"Errore caricamento eventi: {e}")
+
         self.reset_game()
         self._init_gemini()
 
@@ -403,8 +412,35 @@ class GameEngine:
 
         scenario_prompt = f"CONTESTO GLOBALE DELLO SCENARIO: {self.scenario_context}\n" if self.scenario_context else ""
 
+        # --- CONTROLLO EVENTI STORICI (EFFETTO FARFALLA) ---
+        old_date_obj = self.game_state["current_date"] - delta
+        new_date_obj = self.game_state["current_date"]
+
+        historical_prompt = ""
+        triggered_events = []
+
+        for evt in self.master_timeline:
+            evt_date = datetime.date.fromisoformat(evt["date"])
+            # Se la data dell'evento è compresa tra il vecchio turno e il nuovo turno...
+            if old_date_obj < evt_date <= new_date_obj:
+                triggered_events.append(evt)
+
+        if triggered_events:
+            historical_prompt = "\n⚠️ EVENTI STORICI PREVISTI IN QUESTI GIORNI ⚠️\n"
+            for evt in triggered_events:
+                historical_prompt += f"- {evt['date']}: {evt['title']} ({evt['description']})\n"
+
+            # La Direttiva Segreta per Gemini!
+            historical_prompt += "DIRETTIVA 'EFFETTO FARFALLA': Valuta se questi eventi storici hanno ancora senso logico nel contesto alternativo creato finora dal giocatore. Se sì, falli accadere. Se invece il giocatore ha alterato pesantemente la storia, modifica l'evento o annullalo del tutto spiegando il perché nel tuo resoconto.\n\n"
+
+        # --- ASSEMBLAGGIO DEL PROMPT FINALE ---
         prompt = (
             f"Agisci come il Game Master del simulatore geopolitico 'Polis_AI'.\n"
+            f"Data attuale: {new_date_str}. È trascorso: '{time_jump_text}'.\n"
+            f"{scenario_prompt}"
+            f"{historical_prompt}"
+            f"STATO DEL PAESE:\n- {stats_context}\n- {faction_context}\n- {relations_context}\n\n"
+            # ... il resto del prompt rimane uguale ("REGOLE TASSATIVE PER LA RISPOSTA", ecc.)
             f"Data attuale: {new_date_str}. È trascorso: '{time_jump_text}'.\n"
             f"{scenario_prompt}"
             f"STATO DEL PAESE:\n- {stats_context}\n- {faction_context}\n- {relations_context}\n\n"

@@ -1,0 +1,67 @@
+[
+    {
+        "date": "1789-07-14",
+        "title": "La Presa della Bastiglia",
+        "description": "Il popolo di Parigi insorge. È l'inizio della Rivoluzione Francese, un evento che minaccia di rovesciare tutte le monarchie assolute d'Europa."
+    },
+    {
+        "date": "1815-06-18",
+        "title": "La Battaglia di Waterloo",
+        "description": "Si chiude l'era napoleonica. Le potenze vincitrici si preparano a ridisegnare i confini del mondo al Congresso di Vienna."
+    },
+    {
+        "date": "1848-02-23",
+        "title": "La Primavera dei Popoli",
+        "description": "Un'ondata di moti rivoluzionari borghesi e operai travolge l'Europa. Si chiedono costituzioni, diritti e indipendenza nazionale."
+    },
+    {
+        "date": "1861-03-17",
+        "title": "Proclamazione del Regno d'Italia",
+        "description": "Dopo secoli di frammentazione, la penisola italiana viene unificata sotto la corona dei Savoia, alterando gli equilibri del Mediterraneo."
+    },
+    {
+        "date": "1914-06-28",
+        "title": "L'Attentato di Sarajevo",
+        "description": "L'Arciduca d'Austria viene assassinato, innescando il sistema delle alleanze segrete che trascinerà il mondo nella Grande Guerra."
+    },
+    {
+        "date": "1929-10-24",
+        "title": "Il Giovedì Nero di Wall Street",
+        "description": "La borsa di New York crolla improvvisamente. Inizia la Grande Depressione, che metterà in ginocchio l'economia globale."
+    },
+    {
+        "date": "1939-09-01",
+        "title": "Invasione della Polonia",
+        "description": "Le truppe naziste attraversano il confine polacco, costringendo le potenze occidentali a dichiarare quella che diventerà la Seconda Guerra Mondiale."
+    },
+    {
+        "date": "1945-08-06",
+        "title": "Il Fuoco Atomico",
+        "description": "Gli Stati Uniti sganciano la prima bomba atomica su Hiroshima. Inizia l'era nucleare."
+    },
+    {
+        "date": "1962-10-16",
+        "title": "La Crisi dei Missili di Cuba",
+        "description": "Vengono scoperte testate nucleari sovietiche a Cuba. Il mondo si ferma, a un passo dall'Armageddon nucleare."
+    },
+    {
+        "date": "1989-11-09",
+        "title": "La Caduta del Muro di Berlino",
+        "description": "Il blocco comunista inizia a sgretolarsi. Il muro che divideva l'Europa crolla sotto i colpi di piccone dei cittadini."
+    },
+    {
+        "date": "2001-09-11",
+        "title": "Attacco al Cuore dell'Occidente",
+        "description": "Attentati terroristici colpiscono le Torri Gemelle a New York. Inizia la globale 'Guerra al Terrore'."
+    },
+    {
+        "date": "2008-09-15",
+        "title": "Il Crollo di Lehman Brothers",
+        "description": "La bolla dei mutui subprime esplode. Il sistema bancario mondiale è sull'orlo del baratro."
+    },
+    {
+        "date": "2016-06-23",
+        "title": "Il Voto della Brexit",
+        "description": "Con uno storico referendum, il Regno Unito decide di abbandonare l'Unione Europea, scuotendo i mercati e la politica continentale."
+    }
+]
