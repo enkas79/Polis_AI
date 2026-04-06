@@ -38,12 +38,12 @@ class GameEngine:
 
         # --- NUOVO: Carica la Master Timeline ---
         self.master_timeline = []
-            if os.path.exists("historical_events.json"):
-                try:
-                    with open("historical_events.json", "r", encoding="utf-8") as f:
-                        self.master_timeline = json.load(f)
-                except Exception as e:
-                    print(f"Errore caricamento eventi: {e}")
+        if os.path.exists("historical_events.json"):
+            try:
+                with open("historical_events.json", "r", encoding="utf-8") as f:
+                    self.master_timeline = json.load(f)
+            except Exception as e:
+                print(f"Errore caricamento eventi: {e}")
 
         self.reset_game()
         self._init_gemini()

@@ -582,6 +582,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = MainWindow()
-    #window.showMaximized()
-    window.showFullScreen()
+    window.showMaximized()
+    #window.showFullScreen()
     sys.exit(app.exec())
