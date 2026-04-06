@@ -288,13 +288,23 @@ class GameEngine:
 
     def _check_game_over_conditions(self) -> Optional[str]:
         stats = self.game_state["stats"]
+
+        # 1. Collasso Politico
         if stats["stability"] <= 0:
             return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
+
+        # 2. Bancarotta / Default Sovrano
         tesoro = stats["treasury_billions"]
         debito = stats["public_debt_billions"]
+        economia = stats["economy"]
+
         safe_tesoro = max(1, tesoro)
-        if debito > 1000 and debito > (safe_tesoro * 20):
-            return "DEFAULT SOVRANO: Il debito pubblico è fuori controllo. I mercati internazionali si rifiutano di acquistare i tuoi titoli. Lo stato è in bancarotta."
+
+        # REGOLE PIÙ REALISTICHE:
+        # Si fallisce solo se il debito è astronomico (50x il tesoro) E l'economia è sotto il 30/100 (Recessione profonda)
+        if debito > 1000 and debito > (safe_tesoro * 50) and economia < 30:
+            return "DEFAULT SOVRANO: Il debito pubblico è insostenibile e l'economia è in grave recessione. I mercati si rifiutano di comprare i tuoi titoli. Sei in bancarotta."
+
         return None
 
     def trigger_game_over(self, reason: str) -> Dict[str, Any]:
