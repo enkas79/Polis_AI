@@ -25,6 +25,10 @@ class GameEngine:
         if not os.path.exists("scenarios"):
             os.makedirs("scenarios")
 
+        # --- CREAZIONE CARTELLA SALVATAGGI ---
+        if not os.path.exists("saves"):
+            os.makedirs("saves")
+
         self.reset_game()
         self._init_gemini()
 
@@ -42,7 +46,6 @@ class GameEngine:
         self._init_gemini()
 
     def _format_api_error(self, exception: Exception) -> str:
-        """Ammortizzatore Globale per gli errori di Gemini (incluso il 429)"""
         error_msg = str(exception)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             return "⚠️ SERVER INTELLIGENCE SOVRACCARICHI ⚠️\nHai inviato troppe richieste in poco tempo al Comando Centrale di Google.\n\nPer favore, attendi circa 60 secondi prima di inviare un nuovo ordine o censire una nazione."
@@ -129,7 +132,7 @@ class GameEngine:
             f"Rispondi SOLO con:\n[INIT] TESORO:<int> | DEBITO:<int> | POP:<decimale>"
         )
         try:
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite-lite', contents=prompt)
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             match = re.search(r'\[INIT\]\s*TESORO:\s*(-?[\d\.,]+)\s*\|\s*DEBITO:\s*([\d\.,]+)\s*\|\s*POP:\s*([\d\.,]+)',
                               response.text, re.IGNORECASE)
             if match:
@@ -207,7 +210,6 @@ class GameEngine:
             self.preloaded_nations[country_name.upper()] = new_data
             return {"status": "success", "message": f"{country_name} è stato censito!"}
         except Exception as e:
-            # Usciamo con l'ammortizzatore se il censimento sbatte sul limite 429
             return {"status": "error", "message": self._format_api_error(e)}
 
     def save_game(self, filepath: str) -> None:
@@ -288,7 +290,6 @@ class GameEngine:
         stats = self.game_state["stats"]
         if stats["stability"] <= 0:
             return "COLLASSO DELLO STATO: La stabilità è crollata a zero. Una rivoluzione armata ha rovesciato il tuo governo. Sei stato deposto."
-
         tesoro = stats["treasury_billions"]
         debito = stats["public_debt_billions"]
         safe_tesoro = max(1, tesoro)
@@ -311,7 +312,6 @@ class GameEngine:
             response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
         except Exception as e:
-            # Usciamo con l'ammortizzatore se il game over sbatte sul limite 429
             return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n({self._format_api_error(e)})",
                     "new_date": self.get_current_date_str()}
 
@@ -392,7 +392,14 @@ class GameEngine:
         try:
             response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_text = self._parse_and_update_engine_data(response.text)
-            self.game_state["history_log"].insert(0, log_entry)
+
+            # --- MODIFICA: Salvataggio dizionario storico completo ---
+            history_package = {
+                "summary": log_entry,
+                "date": new_date_str,
+                "report": clean_text
+            }
+            self.game_state["history_log"].insert(0, history_package)
             if len(self.game_state["history_log"]) > 15: self.game_state["history_log"].pop()
 
             game_over_reason = self._check_game_over_conditions()
@@ -403,5 +410,4 @@ class GameEngine:
 
         except Exception as e:
             self.game_state["current_date"] -= delta
-            # Usa il nuovo ammortizzatore globale!
             return {"status": "error", "message": self._format_api_error(e)}

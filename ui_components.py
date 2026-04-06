@@ -258,7 +258,7 @@ class SupportHubDialog(QDialog):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Hub di Supporto e Documentazione Polis_AI")
-        self.setFixedSize(750, 550)  # Ingrandita per leggere meglio i manuali
+        self.setFixedSize(750, 550)
 
         layout = QVBoxLayout(self)
 
@@ -269,9 +269,7 @@ class SupportHubDialog(QDialog):
 
         tabs = QTabWidget()
 
-        # ---------------------------------------------------------
         # TAB 1: DONAZIONI
-        # ---------------------------------------------------------
         tab_donate = QWidget()
         donate_layout = QVBoxLayout(tab_donate)
         donate_lbl = QLabel(
@@ -324,9 +322,7 @@ class SupportHubDialog(QDialog):
         donate_layout.addLayout(qr_layout)
         tabs.addTab(tab_donate, "❤️ Supporta il Progetto")
 
-        # ---------------------------------------------------------
-        # TAB 2: GUIDA API (Esaustiva)
-        # ---------------------------------------------------------
+        # TAB 2: GUIDA API
         tab_api = QWidget()
         api_layout = QVBoxLayout(tab_api)
         api_text = """
@@ -366,9 +362,7 @@ class SupportHubDialog(QDialog):
         api_layout.addWidget(api_lbl)
         tabs.addTab(tab_api, "🔑 Guida API Gemini")
 
-        # ---------------------------------------------------------
-        # TAB 3: MANUALE DI GIOCO (Esaustivo)
-        # ---------------------------------------------------------
+        # TAB 3: MANUALE DI GIOCO
         tab_manual = QWidget()
         manual_layout = QVBoxLayout(tab_manual)
         manual_text = """
@@ -421,3 +415,61 @@ class SupportHubDialog(QDialog):
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
         QMessageBox.information(self, "Copiato", "Indirizzo Toncoin copiato negli appunti!")
+
+
+# =========================================================
+# LA NUOVA CLASSE PER LE STATISTICHE AVANZATE
+# =========================================================
+class AdvancedStatsDialog(QDialog):
+    """Finestra che mostra il report completo delle statistiche del paese."""
+
+    def __init__(self, country_name: str, stats: dict, intel: dict, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Archivio di Stato: {country_name.upper()}")
+        self.setFixedSize(400, 380)
+
+        layout = QVBoxLayout(self)
+
+        header = QLabel(f"<b>Dati Confidenziali: {country_name.upper()}</b>")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet("font-size: 16px; color: #2c3e50; padding-bottom: 10px;")
+        layout.addWidget(header)
+
+        # Formattazione Dati
+        treasury = f"$ {stats.get('treasury_billions', 0)} Miliardi"
+        debt = f"$ {stats.get('public_debt_billions', 0)} Miliardi"
+        pop = f"{stats.get('population_millions', 0)} Milioni"
+        stab = f"{stats.get('stability', 0)} / 100"
+        eco = f"{stats.get('economy', 0)} / 100"
+        rep = f"{stats.get('reputation', 50)} / 100"
+
+        factions = intel.get('factions', [])
+        fac_str = ", ".join(factions) if factions else "Nessuna alleanza formale."
+        res_str = intel.get('resources', 'Dati non disponibili.')
+
+        html_text = f"""
+        <table width='100%' style='font-size: 13px; color: #333;'>
+            <tr><td><b>👑 Stabilità:</b></td><td align='right'>{stab}</td></tr>
+            <tr><td><b>📈 Economia:</b></td><td align='right'>{eco}</td></tr>
+            <tr><td><b>🌍 Reputazione Globale:</b></td><td align='right'>{rep}</td></tr>
+            <tr><td colspan='2'><hr></td></tr>
+            <tr><td><b>💰 Tesoro Statale:</b></td><td align='right'><span style='color: green;'>{treasury}</span></td></tr>
+            <tr><td><b>📉 Debito Pubblico:</b></td><td align='right'><span style='color: red;'>{debt}</span></td></tr>
+            <tr><td><b>👥 Popolazione:</b></td><td align='right'>{pop}</td></tr>
+            <tr><td colspan='2'><hr></td></tr>
+            <tr><td colspan='2'><b>🤝 Alleanze e Blocchi:</b><br><span style='color: #2980b9;'>{fac_str}</span></td></tr>
+            <tr><td colspan='2'><b>🏭 Settori Chiave:</b><br><i>{res_str}</i></td></tr>
+        </table>
+        """
+
+        text_display = QTextEdit()
+        text_display.setReadOnly(True)
+        text_display.setHtml(html_text)
+        text_display.setStyleSheet(
+            "background-color: #fdfdfd; padding: 10px; border: 1px solid #bdc3c7; border-radius: 4px;")
+        layout.addWidget(text_display)
+
+        btn_close = QPushButton("Chiudi Archivio")
+        btn_close.clicked.connect(self.accept)
+        btn_close.setStyleSheet("background-color: #34495e; color: white; font-weight: bold; height: 30px;")
+        layout.addWidget(btn_close)
