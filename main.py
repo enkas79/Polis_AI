@@ -155,6 +155,12 @@ class MainWindow(QMainWindow):
 
         top_layout.addStretch()
 
+        # Contatore API
+        self.lbl_api_counter = QLabel("📡 API: 0")
+        self.lbl_api_counter.setStyleSheet("color: #bdc3c7; font-size: 12px; font-weight: bold;")
+        top_layout.addWidget(self.lbl_api_counter)
+        top_layout.addSpacing(10)
+
         # Pulsante Statistiche Complete a destra
         self.btn_adv_stats = QPushButton("📊 Archivio di Stato")
         self.btn_adv_stats.setStyleSheet(
@@ -282,7 +288,7 @@ class MainWindow(QMainWindow):
         side_panel.addLayout(action_bar_layout)
         side_panel.addSpacing(10)
 
-        # Relazioni Estere (Ora ha più spazio!)
+        # Relazioni Estere
         diplomacy_group = QGroupBox("Relazioni Estere e Alleanze")
         diplomacy_group.setStyleSheet("font-weight: bold; font-size: 12px;")
         diplomacy_layout = QVBoxLayout()
@@ -296,7 +302,7 @@ class MainWindow(QMainWindow):
         diplomacy_group.setLayout(diplomacy_layout)
         side_panel.addWidget(diplomacy_group, stretch=1)
 
-        # Cronologia Eventi (Ora ha più spazio!)
+        # Cronologia Eventi
         history_group = QGroupBox("Archivio Storico (Doppio clic per leggere)")
         history_group.setStyleSheet("font-weight: bold; font-size: 12px;")
         history_layout = QVBoxLayout()
@@ -492,6 +498,10 @@ class MainWindow(QMainWindow):
                     item.setForeground(QColor("#34495e"))
                 self.list_diplomacy.addItem(item)
 
+        # --- AGGIORNAMENTO CONTATORE API ---
+        if hasattr(self.engine, 'get_api_count'):
+            self.lbl_api_counter.setText(f"📡 API: {self.engine.get_api_count()}")
+
     def handle_country_selection(self, country_name: str) -> None:
         current_country = self.engine.get_current_country()
         if current_country == country_name: return
@@ -609,7 +619,10 @@ class MainWindow(QMainWindow):
             return
         stats = self.engine.get_stats()
         intel = self.engine.get_country_intel(country)
-        dialog = AdvancedStatsDialog(country, stats, intel, self)
+
+        # --- MODIFICA: Ora passiamo la history alla finestra ---
+        history = self.engine.get_history()
+        dialog = AdvancedStatsDialog(country, stats, intel, history, self)
         dialog.exec()
 
     @pyqtSlot(QListWidgetItem)

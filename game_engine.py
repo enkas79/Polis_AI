@@ -28,6 +28,7 @@ class GameEngine:
         self.scenario_context: str = ""
         self.preloaded_nations: Dict[str, Any] = {}
         self.current_scenario_filename: Optional[str] = None
+        self.api_requests_count: int = 0
 
         if not os.path.exists("scenarios"):
             os.makedirs("scenarios")
@@ -146,7 +147,8 @@ class GameEngine:
         )
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            self.api_requests_count += 1
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             match = re.search(r'\[INIT\]\s*TESORO:\s*(-?[\d\.,]+)\s*\|\s*DEBITO:\s*([\d\.,]+)\s*\|\s*POP:\s*([\d\.,]+)',
                               response.text, re.IGNORECASE)
             if match:
@@ -173,6 +175,8 @@ class GameEngine:
 
     def get_stats(self) -> Dict[str, Any]:
         return self.game_state["stats"]
+
+    def get_api_count(self) -> int: return self.api_requests_count
 
     def get_history(self) -> list:
         return self.game_state["history_log"]
@@ -211,7 +215,8 @@ class GameEngine:
 
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            self.api_requests_count += 1
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_json_str = response.text.replace('```json', '').replace('```', '').strip()
             new_data = json.loads(clean_json_str)
 
@@ -334,7 +339,8 @@ class GameEngine:
         )
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            self.api_requests_count += 1
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             return {"status": "game_over", "response": response.text, "new_date": self.get_current_date_str()}
         except Exception as e:
             return {"status": "game_over", "response": f"GAME OVER.\nMotivo: {reason}\n({self._format_api_error(e)})",
@@ -452,7 +458,8 @@ class GameEngine:
 
         try:
             # --- MODELLO AGGIORNATO ---
-            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            self.api_requests_count += 1
+            response = self.gemini_client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
             clean_text = self._parse_and_update_engine_data(response.text)
 
             history_package = {
@@ -461,7 +468,7 @@ class GameEngine:
                 "report": clean_text
             }
             self.game_state["history_log"].insert(0, history_package)
-            if len(self.game_state["history_log"]) > 15: self.game_state["history_log"].pop()
+            if len(self.game_state["history_log"]) > 5: self.game_state["history_log"].pop()
 
             game_over_reason = self._check_game_over_conditions()
             if game_over_reason:

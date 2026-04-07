@@ -421,55 +421,61 @@ class SupportHubDialog(QDialog):
 # LA NUOVA CLASSE PER LE STATISTICHE AVANZATE
 # =========================================================
 class AdvancedStatsDialog(QDialog):
-    """Finestra che mostra il report completo delle statistiche del paese."""
-
-    def __init__(self, country_name: str, stats: dict, intel: dict, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, country_name: str, stats: dict, intel: dict, history: list, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Archivio di Stato: {country_name.upper()}")
-        self.setFixedSize(400, 380)
+        self.country_name = country_name
+        self.stats = stats
+        self.intel = intel
+        self.history = history
+        self.setWindowTitle(f"Archivio di Stato: {country_name}")
+        self.resize(500, 600)  # Finestra ingrandita per fare spazio al riassunto
+        self.init_ui()
 
+    def init_ui(self):
         layout = QVBoxLayout(self)
 
-        header = QLabel(f"<b>Dati Confidenziali: {country_name.upper()}</b>")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet("font-size: 16px; color: #2c3e50; padding-bottom: 10px;")
-        layout.addWidget(header)
+        # --- Sezione Risorse ---
+        lbl_res = QLabel("<b>Risorse Strategiche:</b>")
+        layout.addWidget(lbl_res)
+        txt_res = QTextEdit()
+        txt_res.setReadOnly(True)
+        txt_res.setMaximumHeight(80)
+        txt_res.setText(self.intel.get("resources", "Nessun dato."))
+        layout.addWidget(txt_res)
 
-        # Formattazione Dati
-        treasury = f"$ {stats.get('treasury_billions', 0)} Miliardi"
-        debt = f"$ {stats.get('public_debt_billions', 0)} Miliardi"
-        pop = f"{stats.get('population_millions', 0)} Milioni"
-        stab = f"{stats.get('stability', 0)} / 100"
-        eco = f"{stats.get('economy', 0)} / 100"
-        rep = f"{stats.get('reputation', 50)} / 100"
+        # --- Sezione Fazioni ---
+        lbl_fac = QLabel("<b>Fazioni e Organizzazioni:</b>")
+        layout.addWidget(lbl_fac)
+        factions = self.intel.get("factions", [])
+        txt_fac = QTextEdit()
+        txt_fac.setReadOnly(True)
+        txt_fac.setMaximumHeight(80)
+        txt_fac.setText(", ".join(factions) if factions else "Nessuna fazione rilevante.")
+        layout.addWidget(txt_fac)
 
-        factions = intel.get('factions', [])
-        fac_str = ", ".join(factions) if factions else "Nessuna alleanza formale."
-        res_str = intel.get('resources', 'Dati non disponibili.')
+        # --- NUOVA SEZIONE: SITUAZIONE ATTUALE ---
+        lbl_sit = QLabel("<b>Sintesi Situazione Attuale (Ultimi Eventi):</b>")
+        lbl_sit.setStyleSheet("color: #2980b9; margin-top: 10px; font-size: 13px;")
+        layout.addWidget(lbl_sit)
 
-        html_text = f"""
-        <table width='100%' style='font-size: 13px; color: #333;'>
-            <tr><td><b>👑 Stabilità:</b></td><td align='right'>{stab}</td></tr>
-            <tr><td><b>📈 Economia:</b></td><td align='right'>{eco}</td></tr>
-            <tr><td><b>🌍 Reputazione Globale:</b></td><td align='right'>{rep}</td></tr>
-            <tr><td colspan='2'><hr></td></tr>
-            <tr><td><b>💰 Tesoro Statale:</b></td><td align='right'><span style='color: green;'>{treasury}</span></td></tr>
-            <tr><td><b>📉 Debito Pubblico:</b></td><td align='right'><span style='color: red;'>{debt}</span></td></tr>
-            <tr><td><b>👥 Popolazione:</b></td><td align='right'>{pop}</td></tr>
-            <tr><td colspan='2'><hr></td></tr>
-            <tr><td colspan='2'><b>🤝 Alleanze e Blocchi:</b><br><span style='color: #2980b9;'>{fac_str}</span></td></tr>
-            <tr><td colspan='2'><b>🏭 Settori Chiave:</b><br><i>{res_str}</i></td></tr>
-        </table>
-        """
+        txt_sit = QTextEdit()
+        txt_sit.setReadOnly(True)
+        txt_sit.setStyleSheet("background-color: #fdfdfd; font-size: 12px; border: 1px solid #bdc3c7;")
 
-        text_display = QTextEdit()
-        text_display.setReadOnly(True)
-        text_display.setHtml(html_text)
-        text_display.setStyleSheet(
-            "background-color: #fdfdfd; padding: 10px; border: 1px solid #bdc3c7; border-radius: 4px;")
-        layout.addWidget(text_display)
+        # Generiamo il riassunto prendendo gli ultimi 3 report dalla cronologia
+        sintesi = ""
+        for item in self.history[:3]:
+            if isinstance(item, dict):
+                sintesi += f"► Data: {item['date']}\n{item['summary']}\n\n"
 
+        if not sintesi:
+            sintesi = "Il tuo mandato è appena iniziato. Nessuna direttiva emessa o evento registrato."
+
+        txt_sit.setText(sintesi)
+        layout.addWidget(txt_sit)
+
+        # --- Pulsante Chiusura ---
         btn_close = QPushButton("Chiudi Archivio")
+        btn_close.setStyleSheet("background-color: #ecf0f1; font-weight: bold; padding: 6px;")
         btn_close.clicked.connect(self.accept)
-        btn_close.setStyleSheet("background-color: #34495e; color: white; font-weight: bold; height: 30px;")
         layout.addWidget(btn_close)
